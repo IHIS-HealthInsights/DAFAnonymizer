@@ -1,18 +1,17 @@
-import React from "react";
-import Button from "antd/es/button";
+import React, { useState } from "react";
 import data from "../dummydata/data";
-import { Table, Divider, Tag } from "antd";
-import AnonTypeSelector from "../components/AnonTypeSelector";
-
-const NRIC_REGEX = /([STFG]\d{7}[A-Z])/;
+import { Table } from "antd";
+import AnonTypeSelector from "./components/AnonTypeSelector";
+import Transforms from "../anonymizer/Transforms";
+import * as Matchers from "../anonymizer/Matchers";
 
 const highlightSHIPII = text => {
-  let matches = [...text.split(NRIC_REGEX)];
+  let matches = [...text.split(Matchers.NRIC)];
   let output = [];
   for (let i = 0; i < matches.length; i++) {
     const match = matches[i];
     if (match.length === 0) continue;
-    if (match.match(NRIC_REGEX)) {
+    if (match.match(Matchers.NRIC)) {
       output.push(
         <span key={i} style={{ backgroundColor: "yellow" }}>
           {match}
@@ -26,31 +25,35 @@ const highlightSHIPII = text => {
 };
 
 const AnonPreviewer = () => {
-  const columns = [
-    {
-      key: "key",
-      title: (
-        <div>
-          <strong>NRIC</strong>
-          <br />
-          <AnonTypeSelector></AnonTypeSelector>
-        </div>
-      ),
-      dataIndex: "nric",
-      render: highlightSHIPII
-    },
-    {
-      key: "name",
-      title: (
-        <div>
-          <strong>Name</strong>
-          <br />
-          <AnonTypeSelector></AnonTypeSelector>
-        </div>
-      ),
-      dataIndex: "name"
+  // Derive columns spec from the data
+  const colKeys = Object.keys(data[0]).filter(key => key !== "key");
+  const initialState = {};
+  for (const key of colKeys) {
+    initialState[key] = "OTHER";
+  }
+  const [anonTypes, setAnonTypes] = useState(initialState);
+  const columns = colKeys.map((key, i) => ({
+    ellipsis: true,
+    title: (
+      <div>
+        <strong>{key.toUpperCase()}</strong>
+        <br />
+        <AnonTypeSelector
+          onAnonTypeChange={value =>
+            setAnonTypes({ ...anonTypes, [key]: value })
+          }
+        />
+      </div>
+    ),
+    dataIndex: key,
+    render: text => {
+      return [Transforms[anonTypes[key]], highlightSHIPII].reduce(
+        (prev, fn) => fn(prev),
+        text
+      );
     }
-  ];
+  }));
+
   return (
     <Table
       dataSource={data}

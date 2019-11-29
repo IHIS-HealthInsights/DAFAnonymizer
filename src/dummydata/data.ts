@@ -9,7 +9,9 @@ for (let i = 0; i < 5; i++) {
   data.push({
     key: i,
     nric: generateNRIC() + " Hello",
-    name: "Name" + i
+    name: "Name" + i,
+    field1: "Field1_" + i,
+    field2: "Field2_" + i
   });
 }
 

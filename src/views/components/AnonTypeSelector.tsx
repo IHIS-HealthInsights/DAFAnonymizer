@@ -1,40 +1,16 @@
 import React from "react";
+import ANON_TYPES from "../../anonymizer/AnonTypes";
 import { Select } from "antd";
-
 const { Option } = Select;
 
-function onChange(value) {
-  console.log(`selected ${value}`);
-}
-
-function onBlur() {
-  console.log("blur");
-}
-
-function onFocus() {
-  console.log("focus");
-}
-
-function onSearch(val) {
-  console.log("search:", val);
-}
-
-const ANON_TYPES = {
-  NAME: "NAME",
-  NRIC: "NRIC"
-};
-
-const AnonTypeSelector = () => {
+const AnonTypeSelector = props => {
   return (
     <Select
       showSearch
       style={{ width: 200 }}
       placeholder="Select Field Type"
       optionFilterProp="children"
-      onChange={onChange}
-      onFocus={onFocus}
-      onBlur={onBlur}
-      // onSearch={onSearch}
+      onChange={props.onAnonTypeChange}
       filterOption={(input, option) =>
         (option.props.children as string)
           .toLowerCase()
