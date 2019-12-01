@@ -1,4 +1,4 @@
-const ANON_TYPES = {
+const ANON_TYPES: Record<string, string> = {
   NAME: "NAME",
   NRIC: "NRIC",
   OTHER: "OTHER"

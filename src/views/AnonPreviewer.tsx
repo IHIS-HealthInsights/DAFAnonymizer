@@ -3,26 +3,6 @@ import data from "../dummydata/data";
 import { Table } from "antd";
 import AnonTypeSelector from "./components/AnonTypeSelector";
 import Transforms from "../anonymizer/Transforms";
-import * as Matchers from "../anonymizer/Matchers";
-
-const highlightSHIPII = text => {
-  let matches = [...text.split(Matchers.NRIC)];
-  let output = [];
-  for (let i = 0; i < matches.length; i++) {
-    const match = matches[i];
-    if (match.length === 0) continue;
-    if (match.match(Matchers.NRIC)) {
-      output.push(
-        <span key={i} style={{ backgroundColor: "yellow" }}>
-          {match}
-        </span>
-      );
-    } else {
-      output.push(<span key={i}>{match}</span>);
-    }
-  }
-  return <div>{output}</div>;
-};
 
 const AnonPreviewer = () => {
   // Derive columns spec from the data
@@ -46,12 +26,7 @@ const AnonPreviewer = () => {
       </div>
     ),
     dataIndex: key,
-    render: text => {
-      return [Transforms[anonTypes[key]], highlightSHIPII].reduce(
-        (prev, fn) => fn(prev),
-        text
-      );
-    }
+    render: Transforms[anonTypes[key]]
   }));
 
   return (
