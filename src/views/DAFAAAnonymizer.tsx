@@ -9,7 +9,7 @@ import FileUploader from "./components/FileUploader";
 
 const { Step } = Steps;
 
-const AnonPreviewer = () => {
+const DAFAAAnonymizer = () => {
   const SCROLL_COLUMNS_THRESHOLD = 5;
   const [previewData, setPreviewData] = useState([]);
   const [anonTypes, setAnonTypes] = useState({});
@@ -138,7 +138,7 @@ const AnonPreviewer = () => {
       title="DAFAA Anonymizer"
       subTitle=""
       extra={[
-        <strong>DAFAA Mode</strong>,
+        <strong key="dafaalabel">DAFAA Mode</strong>,
         <Radio.Group
           key="dafaamode"
           defaultValue="a"
@@ -185,4 +185,4 @@ const AnonPreviewer = () => {
   );
 };
 
-export default AnonPreviewer;
+export default DAFAAAnonymizer;

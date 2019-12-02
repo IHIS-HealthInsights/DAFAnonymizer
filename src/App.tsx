@@ -1,7 +1,9 @@
 import React, { Component } from "react";
-import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
+import { Route, BrowserRouter as Router, Switch } from "react-router-dom";
+
+import DAFAAAnonymizer from "./views/DAFAAAnonymizer";
+
 import "./App.css";
-import AnonPreviewer from "./views/AnonPreviewer";
 
 class App extends Component {
   render() {
@@ -10,7 +12,7 @@ class App extends Component {
         <Router>
           <Switch>
             <Route path="/">
-              <AnonPreviewer />
+              <DAFAAAnonymizer />
             </Route>
           </Switch>
         </Router>
