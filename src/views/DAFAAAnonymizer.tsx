@@ -1,6 +1,7 @@
-import { Button, PageHeader, Radio, Steps, Table } from "antd";
+import { Button, PageHeader, Radio, Steps, Table, Card, Progress } from "antd";
 import Papa from "papaparse";
 import React, { useState } from "react";
+import { useDebounce } from "@react-hook/debounce";
 
 import Transforms from "../anonymizer/Transforms";
 import { ANON_TYPES, FIELD_TYPES } from "../anonymizer/Types";
@@ -8,9 +9,17 @@ import AnonTypeSelector from "./components/AnonTypeSelector";
 import FileUploader from "./components/FileUploader";
 
 const { Step } = Steps;
+// Papa.LocalChunkSize = "50000kb";
 
 const DAFAAAnonymizer = () => {
   const SCROLL_COLUMNS_THRESHOLD = 5;
+  const [userFile, setUserFile] = useState();
+  const [fileReadPercent, setFileReadPercent] = useDebounce(0, 100, true);
+  const [fileTransformPercent, setFileTransformPercent] = useDebounce(
+    0,
+    100,
+    true
+  );
   const [previewData, setPreviewData] = useState([]);
   const [anonTypes, setAnonTypes] = useState({});
   const [currentStep, setCurrentStep] = useState(0);
@@ -25,7 +34,7 @@ const DAFAAAnonymizer = () => {
     const isFixedMode = colKeys.length >= SCROLL_COLUMNS_THRESHOLD;
     columnsConfig = colKeys.map((key, i) => ({
       fixed: isFixedMode && i === 0 ? "left" : null,
-      width: isFixedMode && i === 0 ? 200 : undefined,
+      width: isFixedMode && i === 0 ? 250 : undefined,
       ellipsis: true,
       title: (
         <div style={{ width: "100%" }}>
@@ -66,19 +75,24 @@ const DAFAAAnonymizer = () => {
     // Make use of transformFile hook to read, transform, and setPreviewData on Previewer component
     // If `resolve` is not called, data will not be uploaded
     transformFile(file) {
+      setUserFile(file);
+      let previewData = [];
+      let readRowsCount = 0;
+
       return new Promise(resolve => {
         Papa.parse(file, {
           header: hasHeader,
           preview: previewCount,
-          complete: ({ data, errors, meta }) => {
-            if (errors.length) {
-              console.error(errors);
-              alert("Failed to parse CSV file");
+          skipEmptyLines: true,
+          chunk: ({ data, errors, meta }) => {
+            if (!data.length) {
+              alert("CSV file is empty");
               return;
             }
 
-            if (!data.length) {
-              alert("CSV file is empty");
+            if (errors.length) {
+              console.error(errors);
+              alert("Failed to parse CSV file");
               return;
             }
 
@@ -94,10 +108,17 @@ const DAFAAAnonymizer = () => {
               });
             }
 
+            setFileTransformPercent(
+              Math.round((readRowsCount / previewCount) * 100)
+            );
+            previewData = previewData.concat(data);
+          },
+          complete: () => {
+            setFileReadPercent(100);
             // Add incrementing key to each record
-            data = data.map((d, i) => ({ ...d, key: i }));
+            previewData = previewData.map((d, i) => ({ ...d, key: i }));
 
-            setPreviewData(data);
+            setPreviewData(previewData);
             setCurrentStep(1);
           }
         });
@@ -109,7 +130,9 @@ const DAFAAAnonymizer = () => {
     {
       index: 0,
       title: "Upload CSV",
-      content: <FileUploader {...fileUploaderProps} />
+      content: (
+        <FileUploader {...fileUploaderProps} progress={fileReadPercent} />
+      )
     },
     {
       index: 1,
@@ -127,7 +150,76 @@ const DAFAAAnonymizer = () => {
     {
       index: 2,
       title: "Anonymize",
-      content: null
+      content: (
+        <Card>
+          <Button
+            type="primary"
+            onClick={() => {
+              let anonymizedData = [];
+              const progress = 0;
+              Papa.parse(userFile, {
+                skipEmptyLines: true,
+                header: hasHeader,
+                worker: true,
+                chunk: ({ data, errors, meta }) => {
+                  if (!data.length) {
+                    alert("CSV file is empty");
+                    return;
+                  }
+
+                  if (errors.length) {
+                    console.error(errors);
+                    alert("Failed to write CSV file");
+                    return;
+                  }
+
+                  if (!hasHeader) {
+                    // Convert 2d array into objects with generated header
+                    const numCols = data[0].length;
+                    data = data.map(row => {
+                      const d = {};
+                      for (let i = 0; i < numCols; i++) {
+                        d[`Column${i + 1}`] = row[i];
+                      }
+                      return d;
+                    });
+                  }
+                  console.log(Math.round((meta.cursor / userFile.size) * 100));
+                  setFileTransformPercent(
+                    Math.round((meta.cursor / userFile.size) * 100)
+                  );
+                  anonymizedData = anonymizedData.concat(data);
+                },
+                complete: () => {
+                  const element = document.createElement("a");
+                  const file = new Blob(
+                    [Papa.unparse(anonymizedData, { skipEmptyLines: true })],
+                    {
+                      type: "text/csv"
+                    }
+                  );
+                  element.href = URL.createObjectURL(file);
+                  element.download = "anonymized.csv";
+                  document.body.appendChild(element); // Required for this to work in FireFox
+                  setFileTransformPercent(100);
+                  element.click();
+                }
+              });
+            }}
+          >
+            Download Anonymized Data
+          </Button>
+          {fileTransformPercent > 0 ? (
+            <Progress
+              strokeColor={{
+                from: "#108ee9",
+                to: "#87d068"
+              }}
+              percent={fileTransformPercent}
+            />
+          ) : null}
+        </Card>
+      )
     }
   ];
 

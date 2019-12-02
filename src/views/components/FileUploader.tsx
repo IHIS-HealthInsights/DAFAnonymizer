@@ -1,10 +1,20 @@
-import { Card, Checkbox, Form, Icon, Input, Upload } from "antd";
+import { Card, Checkbox, Form, Icon, Input, Upload, Progress } from "antd";
 import React from "react";
 
 const { Dragger } = Upload;
 
 const FileUploader = props => (
   <Card bodyStyle={{ padding: 5 }}>
+    {props.progress > 0 ? (
+      <Progress
+        strokeColor={{
+          from: "#108ee9",
+          to: "#87d068"
+        }}
+        percent={props.progress}
+      />
+    ) : null}
+
     <Dragger {...props}>
       <p className="ant-upload-drag-icon">
         <Icon type="inbox" />
