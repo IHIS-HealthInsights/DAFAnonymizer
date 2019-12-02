@@ -7,6 +7,7 @@ import Papa from "papaparse";
 import ANON_TYPES from "../anonymizer/AnonTypes";
 
 const AnonPreviewer = () => {
+  const SCROLL_COLUMNS_THRESHOLD = 5;
   const [previewData, setPreviewData] = useState([]);
   const [anonTypes, setAnonTypes] = useState({});
   let columnsConfig = [];
@@ -14,10 +15,13 @@ const AnonPreviewer = () => {
   // Derive columns spec from the data
   if (previewData.length) {
     const colKeys = Object.keys(previewData[0]).filter(key => key !== "key");
-    columnsConfig = colKeys.map(key => ({
+    const isFixedMode = colKeys.length >= SCROLL_COLUMNS_THRESHOLD;
+    columnsConfig = colKeys.map((key, i) => ({
+      fixed: isFixedMode && i === 0 ? "left" : null,
+      width: isFixedMode && i === 0 ? 200 : undefined,
       ellipsis: true,
       title: (
-        <div>
+        <div style={{ width: "100%" }}>
           <strong>{key.toUpperCase()}</strong>
           <br />
           <AnonTypeSelector
@@ -74,6 +78,8 @@ const AnonPreviewer = () => {
           dataSource={previewData}
           columns={columnsConfig}
           rowKey={record => record.key}
+          pagination={{ pageSize: 50 }}
+          scroll={{ x: 1000, y: 700 }}
         ></Table>
       ) : null}
     </div>

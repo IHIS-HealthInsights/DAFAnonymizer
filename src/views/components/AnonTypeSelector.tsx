@@ -7,7 +7,6 @@ const AnonTypeSelector = props => {
   return (
     <Select
       showSearch
-      style={{ width: 200 }}
       placeholder="Select Field Type"
       optionFilterProp="children"
       onChange={props.onAnonTypeChange}
