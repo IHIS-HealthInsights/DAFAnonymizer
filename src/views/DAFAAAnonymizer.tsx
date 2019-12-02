@@ -246,12 +246,17 @@ const DAFAAAnonymizer = () => {
           <Radio.Button value="modeB">Mode B</Radio.Button>
         </Radio.Group>,
 
-        <Button key="prev" onClick={() => setCurrentStep(currentStep - 1)}>
+        <Button
+          key="prev"
+          disabled={currentStep === 0}
+          onClick={() => setCurrentStep(currentStep - 1)}
+        >
           Previous
         </Button>,
         <Button
           key="next"
           type="primary"
+          disabled={currentStep === steps.length - 1}
           onClick={() => setCurrentStep(currentStep + 1)}
         >
           Next

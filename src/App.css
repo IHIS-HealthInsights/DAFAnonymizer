@@ -38,3 +38,8 @@
 .ant-select-dropdown-menu {
   max-height: 500px;
 }
+
+/* Make each step clickable */
+.ant-steps-item-container {
+  cursor: pointer;
+}
