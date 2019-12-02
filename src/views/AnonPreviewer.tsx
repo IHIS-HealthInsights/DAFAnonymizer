@@ -4,7 +4,7 @@ import AnonTypeSelector from "./components/AnonTypeSelector";
 import Transforms from "../anonymizer/Transforms";
 import FileUploader from "./components/FileUploader";
 import Papa from "papaparse";
-import ANON_TYPES from "../anonymizer/AnonTypes";
+import { ANON_TYPES } from "../anonymizer/Types";
 
 const AnonPreviewer = () => {
   const SCROLL_COLUMNS_THRESHOLD = 5;
@@ -36,8 +36,9 @@ const AnonPreviewer = () => {
       ),
       dataIndex: key,
       render: text => {
-        if (!anonTypes[key]) {
-          return Transforms[ANON_TYPES.OTHER](text);
+        // If no option supplied or Transform not specified
+        if (!anonTypes[key] || !Transforms[anonTypes[key]]) {
+          return Transforms[ANON_TYPES.NONE](text);
         }
         return Transforms[anonTypes[key]](text);
       }
