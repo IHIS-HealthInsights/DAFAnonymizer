@@ -1,15 +1,21 @@
-import React, { useState } from "react";
-import { Table } from "antd";
-import AnonTypeSelector from "./components/AnonTypeSelector";
-import Transforms from "../anonymizer/Transforms";
-import FileUploader from "./components/FileUploader";
+import { Button, PageHeader, Radio, Steps, Table } from "antd";
 import Papa from "papaparse";
+import React, { useState } from "react";
+
+import Transforms from "../anonymizer/Transforms";
 import { ANON_TYPES } from "../anonymizer/Types";
+import AnonTypeSelector from "./components/AnonTypeSelector";
+import FileUploader from "./components/FileUploader";
+
+const { Step } = Steps;
 
 const AnonPreviewer = () => {
   const SCROLL_COLUMNS_THRESHOLD = 5;
   const [previewData, setPreviewData] = useState([]);
   const [anonTypes, setAnonTypes] = useState({});
+  const [currentStep, setCurrentStep] = useState(0);
+  const [previewCount, setPreviewCount] = useState(100);
+  const [hasHeader, setHasHeader] = useState(true);
   let columnsConfig = [];
 
   // Derive columns spec from the data
@@ -48,13 +54,17 @@ const AnonPreviewer = () => {
   const fileUploaderProps = {
     accept: ".csv",
     multiple: false,
+    previewCount,
+    setPreviewCount,
+    hasHeader,
+    setHasHeader,
     // Make use of transformFile hook to read, transform, and setPreviewData on Previewer component
     // If `resolve` is not called, data will not be uploaded
     transformFile(file) {
       return new Promise(resolve => {
         Papa.parse(file, {
-          header: true,
-          preview: 100,
+          header: hasHeader,
+          preview: previewCount,
           complete: ({ data, errors, meta }) => {
             if (errors.length) {
               console.error(errors);
@@ -62,19 +72,44 @@ const AnonPreviewer = () => {
               return;
             }
 
+            if (!data.length) {
+              alert("CSV file is empty");
+              return;
+            }
+
+            if (!hasHeader) {
+              // Convert 2d array into objects with generated header
+              const numCols = data[0].length;
+              data = data.map(row => {
+                const d = {};
+                for (let i = 0; i < numCols; i++) {
+                  d[`Column${i + 1}`] = row[i];
+                }
+                return d;
+              });
+            }
+
             // Add incrementing key to each record
             data = data.map((d, i) => ({ ...d, key: i }));
+
             setPreviewData(data);
+            setCurrentStep(1);
           }
         });
       });
     }
   };
 
-  return (
-    <div>
-      <FileUploader {...fileUploaderProps} />
-      {previewData.length ? (
+  const steps = [
+    {
+      index: 0,
+      title: "Upload CSV",
+      content: <FileUploader {...fileUploaderProps} />
+    },
+    {
+      index: 1,
+      title: "Apply Filters",
+      content: (
         <Table
           dataSource={previewData}
           columns={columnsConfig}
@@ -82,8 +117,71 @@ const AnonPreviewer = () => {
           pagination={{ pageSize: 50 }}
           scroll={{ x: 1000, y: 700 }}
         ></Table>
-      ) : null}
-    </div>
+      )
+    },
+    {
+      index: 2,
+      title: "Anonymize",
+      content: null
+    }
+  ];
+
+  const getStepStatus = (step, currentStep) => {
+    if (step === currentStep) return "process";
+    else if (step < currentStep) return "finish";
+    else if (step > currentStep) return "wait";
+  };
+
+  return (
+    <PageHeader
+      ghost={false}
+      title="DAFAA Anonymizer"
+      subTitle=""
+      extra={[
+        <strong>DAFAA Mode</strong>,
+        <Radio.Group
+          key="dafaamode"
+          defaultValue="a"
+          style={{ marginRight: 60 }}
+        >
+          <Radio.Button value="a">Mode A</Radio.Button>
+          <Radio.Button value="b">Mode B</Radio.Button>
+        </Radio.Group>,
+
+        <Button key="prev" onClick={() => setCurrentStep(currentStep - 1)}>
+          Previous
+        </Button>,
+        <Button
+          key="next"
+          type="primary"
+          onClick={() => setCurrentStep(currentStep + 1)}
+        >
+          Next
+        </Button>
+      ]}
+    >
+      <Steps
+        type="navigation"
+        size="small"
+        current={currentStep}
+        style={{
+          marginBottom: 4,
+          boxShadow: "0px -1px 0 0 #e8e8e8 inset"
+        }}
+      >
+        {steps.map(step => (
+          <Step
+            key={step.index}
+            status={getStepStatus(step.index, currentStep)}
+            title={step.title}
+            onClick={() => {
+              setCurrentStep(step.index);
+            }}
+          />
+        ))}
+      </Steps>
+      {steps[currentStep].content}
+    </PageHeader>
   );
 };
 
