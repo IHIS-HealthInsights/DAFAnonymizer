@@ -3,7 +3,7 @@ import Papa from "papaparse";
 import React, { useState } from "react";
 
 import Transforms from "../anonymizer/Transforms";
-import { ANON_TYPES } from "../anonymizer/Types";
+import { ANON_TYPES, FIELD_TYPES } from "../anonymizer/Types";
 import AnonTypeSelector from "./components/AnonTypeSelector";
 import FileUploader from "./components/FileUploader";
 
@@ -16,6 +16,7 @@ const DAFAAAnonymizer = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [previewCount, setPreviewCount] = useState(100);
   const [hasHeader, setHasHeader] = useState(true);
+  const [selectedMode, setSelectedMode] = useState("modeB");
   let columnsConfig = [];
 
   // Derive columns spec from the data
@@ -42,11 +43,15 @@ const DAFAAAnonymizer = () => {
       ),
       dataIndex: key,
       render: text => {
+        let selectedFilter = anonTypes[key];
+        if (FIELD_TYPES[selectedFilter]) {
+          selectedFilter = FIELD_TYPES[selectedFilter][selectedMode];
+        }
         // If no option supplied or Transform not specified
-        if (!anonTypes[key] || !Transforms[anonTypes[key]]) {
+        if (!selectedFilter || !Transforms[selectedFilter]) {
           return Transforms[ANON_TYPES.NONE](text);
         }
-        return Transforms[anonTypes[key]](text);
+        return Transforms[selectedFilter](text);
       }
     }));
   }
@@ -141,11 +146,12 @@ const DAFAAAnonymizer = () => {
         <strong key="dafaalabel">DAFAA Mode</strong>,
         <Radio.Group
           key="dafaamode"
-          defaultValue="a"
+          defaultValue="modeB"
           style={{ marginRight: 60 }}
+          onChange={e => setSelectedMode(e.target.value)}
         >
-          <Radio.Button value="a">Mode A</Radio.Button>
-          <Radio.Button value="b">Mode B</Radio.Button>
+          <Radio.Button value="modeA">Mode A</Radio.Button>
+          <Radio.Button value="modeB">Mode B</Radio.Button>
         </Radio.Group>,
 
         <Button key="prev" onClick={() => setCurrentStep(currentStep - 1)}>

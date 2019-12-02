@@ -35,7 +35,7 @@ const AnonTypeSelector = props => {
         {Object.keys(FIELD_TYPES).map(type => {
           return (
             <Option key={type} value={type}>
-              {FIELD_TYPES[type]}
+              {FIELD_TYPES[type].display}
             </Option>
           );
         })}

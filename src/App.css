@@ -22,3 +22,19 @@
 .App-link {
   color: #09d3ac;
 }
+
+/* Overrides */
+
+/* Make select fields fill the column width */
+.ant-table-header-column {
+  display: block;
+  width: 100%;
+}
+.ant-select {
+  width: 100%;
+}
+
+/* Make select dropdown display more options */
+.ant-select-dropdown-menu {
+  max-height: 500px;
+}

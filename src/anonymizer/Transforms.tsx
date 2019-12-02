@@ -34,7 +34,8 @@ const Transforms: Record<string, (text: String) => React.ReactNode> = {
     <span style={{ textDecoration: "line-through", color: "grey" }}>
       {text}
     </span>
-  )
+  ),
+  [ANON_TYPES.SUPPRESS]: text => <span>Add Random Noise</span>
 };
 
 export default Transforms;

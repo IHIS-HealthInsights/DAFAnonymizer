@@ -11,14 +11,3 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
-
-/* Overrides */
-
-/* Make select fields fill the column width */
-.ant-table-header-column {
-  display: block;
-  width: 100%;
-}
-.ant-select {
-  width: 100%;
-}
