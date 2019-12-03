@@ -7,23 +7,30 @@ import Transforms from "../anonymizer/Transforms";
 import { ANON_TYPES, FIELD_TYPES } from "../anonymizer/Types";
 import AnonTypeSelector from "./components/AnonTypeSelector";
 import FileUploader from "./components/FileUploader";
+/* eslint import/no-webpack-loader-syntax: off */
+import AnonymizerWorker from "worker-loader!../workers/anonymizer.worker";
+const anonymizerWorker = new AnonymizerWorker();
 
 const { Step } = Steps;
-// Papa.LocalChunkSize = "50000kb";
 
 const DAFAAAnonymizer = () => {
+  const DEBOUNCE_MS = 100;
   const SCROLL_COLUMNS_THRESHOLD = 5;
   const [userFile, setUserFile] = useState();
-  const [fileReadPercent, setFileReadPercent] = useDebounce(0, 100, true);
+  const [fileReadPercent, setFileReadPercent] = useDebounce(
+    0,
+    DEBOUNCE_MS,
+    true
+  );
   const [processFileReadPercent, setProcessFileReadPercent] = useDebounce(
     0,
-    100,
+    DEBOUNCE_MS,
     true
   );
   const [
     processFileTransformPercent,
     setProcessFileTransformPercent
-  ] = useDebounce(0, 100, true);
+  ] = useDebounce(0, DEBOUNCE_MS, true);
   const [previewData, setPreviewData] = useState([]);
   const [anonTypes, setAnonTypes] = useState({});
   const [currentStep, setCurrentStep] = useState(0);
@@ -160,7 +167,6 @@ const DAFAAAnonymizer = () => {
             type="primary"
             onClick={() => {
               let rawData = [];
-              const progress = 0;
               Papa.parse(userFile, {
                 skipEmptyLines: true,
                 header: hasHeader,
@@ -194,57 +200,43 @@ const DAFAAAnonymizer = () => {
                   rawData = rawData.concat(data);
                 },
                 complete: () => {
-                  const anonymizedData = [];
-                  let processedCount = 0;
-                  let totalCount = rawData.length;
-
-                  for (const record of rawData) {
-                    if (processedCount % 10000 === 0) {
-                      setProcessFileTransformPercent(
-                        Math.floor((processedCount / totalCount) * 100)
-                      );
-                    }
-                    const anonymizedRecord = {};
-                    for (const col in record) {
-                      let selectedFilter = anonTypes[col];
-                      if (FIELD_TYPES[selectedFilter]) {
-                        selectedFilter =
-                          FIELD_TYPES[selectedFilter][selectedMode];
-                      }
-                      // If no option supplied or Transform not specified
-                      if (!selectedFilter || !Transforms[selectedFilter]) {
-                        anonymizedRecord[col] = Transforms[
-                          ANON_TYPES.NONE
-                        ].process(record[col]);
-                      } else {
-                        const output = Transforms[selectedFilter].process(
-                          record[col]
-                        );
-                        if (output !== null) {
-                          // null means that the column will be dropped
-                          anonymizedRecord[col] = output;
+                  // Set as complete after DEBOUNCE so that it will not get skipped
+                  setTimeout(() => setProcessFileReadPercent(100), DEBOUNCE_MS);
+                  // Push computation to web worker
+                  anonymizerWorker.postMessage({
+                    rawData,
+                    anonTypes,
+                    selectedMode
+                  });
+                  // Listen for completion and progress updates
+                  anonymizerWorker.onmessage = ({ data }) => {
+                    if (data.type === "UPDATE_PROGRESS") {
+                      setProcessFileTransformPercent(data.progress);
+                    } else if (data.type === "COMPLETE") {
+                      const anonymizedData = data.result;
+                      // Trigger user download
+                      const element = document.createElement("a");
+                      const file = new Blob(
+                        [
+                          Papa.unparse(anonymizedData, {
+                            skipEmptyLines: true
+                          })
+                        ],
+                        {
+                          type: "text/csv"
                         }
-                      }
+                      );
+                      element.href = URL.createObjectURL(file);
+                      element.download = "anonymized.csv";
+                      document.body.appendChild(element); // Required for this to work in FireFox
+                      // Set as complete after DEBOUNCE so that it will not get skipped
+                      setTimeout(
+                        () => setProcessFileTransformPercent(100),
+                        DEBOUNCE_MS
+                      );
+                      element.click();
                     }
-                    anonymizedData.push(anonymizedRecord);
-                    processedCount++;
-                  }
-
-                  setProcessFileTransformPercent(100);
-
-                  // Trigger user download
-                  const element = document.createElement("a");
-                  const file = new Blob(
-                    [Papa.unparse(anonymizedData, { skipEmptyLines: true })],
-                    {
-                      type: "text/csv"
-                    }
-                  );
-                  element.href = URL.createObjectURL(file);
-                  element.download = "anonymized.csv";
-                  document.body.appendChild(element); // Required for this to work in FireFox
-                  setProcessFileReadPercent(100);
-                  element.click();
+                  };
                 }
               });
             }}
