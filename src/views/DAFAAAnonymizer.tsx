@@ -15,11 +15,15 @@ const DAFAAAnonymizer = () => {
   const SCROLL_COLUMNS_THRESHOLD = 5;
   const [userFile, setUserFile] = useState();
   const [fileReadPercent, setFileReadPercent] = useDebounce(0, 100, true);
-  const [fileTransformPercent, setFileTransformPercent] = useDebounce(
+  const [processFileReadPercent, setProcessFileReadPercent] = useDebounce(
     0,
     100,
     true
   );
+  const [
+    processFileTransformPercent,
+    setProcessFileTransformPercent
+  ] = useDebounce(0, 100, true);
   const [previewData, setPreviewData] = useState([]);
   const [anonTypes, setAnonTypes] = useState({});
   const [currentStep, setCurrentStep] = useState(0);
@@ -58,9 +62,9 @@ const DAFAAAnonymizer = () => {
         }
         // If no option supplied or Transform not specified
         if (!selectedFilter || !Transforms[selectedFilter]) {
-          return Transforms[ANON_TYPES.NONE](text);
+          return Transforms[ANON_TYPES.NONE].preview(text);
         }
-        return Transforms[selectedFilter](text);
+        return Transforms[selectedFilter].preview(text);
       }
     }));
   }
@@ -108,7 +112,7 @@ const DAFAAAnonymizer = () => {
               });
             }
 
-            setFileTransformPercent(
+            setProcessFileReadPercent(
               Math.round((readRowsCount / previewCount) * 100)
             );
             previewData = previewData.concat(data);
@@ -155,7 +159,7 @@ const DAFAAAnonymizer = () => {
           <Button
             type="primary"
             onClick={() => {
-              let anonymizedData = [];
+              let rawData = [];
               const progress = 0;
               Papa.parse(userFile, {
                 skipEmptyLines: true,
@@ -184,13 +188,51 @@ const DAFAAAnonymizer = () => {
                       return d;
                     });
                   }
-                  console.log(Math.round((meta.cursor / userFile.size) * 100));
-                  setFileTransformPercent(
+                  setProcessFileReadPercent(
                     Math.round((meta.cursor / userFile.size) * 100)
                   );
-                  anonymizedData = anonymizedData.concat(data);
+                  rawData = rawData.concat(data);
                 },
                 complete: () => {
+                  const anonymizedData = [];
+                  let processedCount = 0;
+                  let totalCount = rawData.length;
+
+                  for (const record of rawData) {
+                    if (processedCount % 10000 === 0) {
+                      setProcessFileTransformPercent(
+                        Math.floor((processedCount / totalCount) * 100)
+                      );
+                    }
+                    const anonymizedRecord = {};
+                    for (const col in record) {
+                      let selectedFilter = anonTypes[col];
+                      if (FIELD_TYPES[selectedFilter]) {
+                        selectedFilter =
+                          FIELD_TYPES[selectedFilter][selectedMode];
+                      }
+                      // If no option supplied or Transform not specified
+                      if (!selectedFilter || !Transforms[selectedFilter]) {
+                        anonymizedRecord[col] = Transforms[
+                          ANON_TYPES.NONE
+                        ].process(record[col]);
+                      } else {
+                        const output = Transforms[selectedFilter].process(
+                          record[col]
+                        );
+                        if (output !== null) {
+                          // null means that the column will be dropped
+                          anonymizedRecord[col] = output;
+                        }
+                      }
+                    }
+                    anonymizedData.push(anonymizedRecord);
+                    processedCount++;
+                  }
+
+                  setProcessFileTransformPercent(100);
+
+                  // Trigger user download
                   const element = document.createElement("a");
                   const file = new Blob(
                     [Papa.unparse(anonymizedData, { skipEmptyLines: true })],
@@ -201,7 +243,7 @@ const DAFAAAnonymizer = () => {
                   element.href = URL.createObjectURL(file);
                   element.download = "anonymized.csv";
                   document.body.appendChild(element); // Required for this to work in FireFox
-                  setFileTransformPercent(100);
+                  setProcessFileReadPercent(100);
                   element.click();
                 }
               });
@@ -209,14 +251,26 @@ const DAFAAAnonymizer = () => {
           >
             Download Anonymized Data
           </Button>
-          {fileTransformPercent > 0 ? (
-            <Progress
-              strokeColor={{
-                from: "#108ee9",
-                to: "#87d068"
-              }}
-              percent={fileTransformPercent}
-            />
+          {processFileReadPercent > 0 ? (
+            <div>
+              <strong>File read progress:</strong>
+              <Progress
+                strokeColor={{
+                  from: "#108ee9",
+                  to: "#87d068"
+                }}
+                percent={processFileReadPercent}
+              />
+              <br />
+              <strong>Anonymization progress:</strong>
+              <Progress
+                strokeColor={{
+                  from: "#108ee9",
+                  to: "#87d068"
+                }}
+                percent={processFileTransformPercent}
+              />
+            </div>
           ) : null}
         </Card>
       )
