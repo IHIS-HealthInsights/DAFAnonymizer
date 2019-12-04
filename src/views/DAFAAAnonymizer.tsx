@@ -4,8 +4,8 @@ import React, { useState } from "react";
 import { useDebounce } from "@react-hook/debounce";
 
 import Transforms from "../anonymizer/Transforms";
-import { ANON_TYPES, FIELD_TYPES } from "../anonymizer/Types";
-import AnonTypeSelector from "./components/AnonTypeSelector";
+import { TRANSFORM_TYPES, FIELD_TYPES } from "../anonymizer/Types";
+import TransformTypeSelector from "./components/TransformTypeSelector";
 import FileUploader from "./components/FileUploader";
 /* eslint import/no-webpack-loader-syntax: off */
 import AnonymizerWorker from "worker-loader!../workers/anonymizer.worker";
@@ -32,7 +32,7 @@ const DAFAAAnonymizer = () => {
     setProcessFileTransformPercent
   ] = useDebounce(0, DEBOUNCE_MS, true);
   const [previewData, setPreviewData] = useState([]);
-  const [anonTypes, setAnonTypes] = useState({});
+  const [transformTypes, setTransformTypes] = useState({});
   const [currentStep, setCurrentStep] = useState(0);
   const [previewCount, setPreviewCount] = useState(100);
   const [hasHeader, setHasHeader] = useState(true);
@@ -51,11 +51,11 @@ const DAFAAAnonymizer = () => {
         <div style={{ width: "100%" }}>
           <strong>{key.toUpperCase()}</strong>
           <br />
-          <AnonTypeSelector
-            value={anonTypes[key]}
-            onAnonTypeChange={value =>
-              setAnonTypes({
-                ...anonTypes,
+          <TransformTypeSelector
+            value={transformTypes[key]}
+            onTransformTypeChange={value =>
+              setTransformTypes({
+                ...transformTypes,
                 [key]: value
               })
             }
@@ -64,13 +64,13 @@ const DAFAAAnonymizer = () => {
       ),
       dataIndex: key,
       render: text => {
-        let selectedFilter = anonTypes[key];
+        let selectedFilter = transformTypes[key];
         if (FIELD_TYPES[selectedFilter]) {
           selectedFilter = FIELD_TYPES[selectedFilter][selectedMode];
         }
         // If no option supplied or Transform not specified
         if (!selectedFilter || !Transforms[selectedFilter]) {
-          return Transforms[ANON_TYPES.NONE].preview(text);
+          return Transforms[TRANSFORM_TYPES.NONE].preview(text);
         }
         return Transforms[selectedFilter].preview(text);
       }
@@ -126,7 +126,7 @@ const DAFAAAnonymizer = () => {
             previewData = previewData.concat(data);
           },
           complete: () => {
-            setAnonTypes({}); // Reset in case there was a previous upload
+            setTransformTypes({}); // Reset in case there was a previous upload
             setFileReadPercent(100);
             // Add incrementing key to each record
             previewData = previewData.map((d, i) => ({ ...d, key: i }));
@@ -208,7 +208,7 @@ const DAFAAAnonymizer = () => {
                   // Push computation to web worker
                   anonymizerWorker.postMessage({
                     rawData,
-                    anonTypes,
+                    transformTypes,
                     selectedMode
                   });
                   // Listen for completion and progress updates

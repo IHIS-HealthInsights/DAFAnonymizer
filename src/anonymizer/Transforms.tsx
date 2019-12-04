@@ -1,6 +1,6 @@
 import React from "react";
 import * as CryptoJS from "crypto-js";
-import { ANON_TYPES } from "./Types";
+import { TRANSFORM_TYPES } from "./Types";
 import * as Matchers from "./Matchers";
 
 const key = CryptoJS.lib.WordArray.random(16);
@@ -16,7 +16,7 @@ interface ITransform {
 }
 
 const Transforms: Record<string, ITransform> = {
-  [ANON_TYPES.NONE]: {
+  [TRANSFORM_TYPES.NONE]: {
     preview: function(text) {
       // Match and highlight sensitive values
       let matches = [...text.split(Matchers.NRIC)];
@@ -40,7 +40,7 @@ const Transforms: Record<string, ITransform> = {
       return text;
     }
   },
-  [ANON_TYPES.ENCRYPT]: {
+  [TRANSFORM_TYPES.ENCRYPT]: {
     _encrypt: function(text) {
       return CryptoJS.AES.encrypt(text, key, { iv: iv }).toString();
     },
@@ -55,7 +55,7 @@ const Transforms: Record<string, ITransform> = {
       return this._encrypt(text);
     }
   },
-  [ANON_TYPES.REMOVE]: {
+  [TRANSFORM_TYPES.REMOVE]: {
     preview: function(text) {
       return (
         <span style={{ textDecoration: "line-through", color: "grey" }}>
@@ -67,7 +67,7 @@ const Transforms: Record<string, ITransform> = {
       return null;
     }
   },
-  [ANON_TYPES.SUPPRESS]: {
+  [TRANSFORM_TYPES.SUPPRESS]: {
     preview: function(text) {
       return <span>Add Random Noise</span>;
     },

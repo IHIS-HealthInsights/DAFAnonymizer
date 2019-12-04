@@ -1,11 +1,11 @@
 import Transforms from "../anonymizer/Transforms";
-import { ANON_TYPES, FIELD_TYPES } from "../anonymizer/Types";
+import { TRANSFORM_TYPES, FIELD_TYPES } from "../anonymizer/Types";
 import "./custom.d"; // This is required for worker-loader - typescript integration
 
 const ctx: Worker = self as any;
 
 ctx.onmessage = event => {
-  const { rawData, anonTypes, selectedMode } = event.data;
+  const { rawData, transformTypes, selectedMode } = event.data;
   const anonymizedData = [];
   let processedCount = 0;
   let totalCount = rawData.length;
@@ -19,13 +19,13 @@ ctx.onmessage = event => {
     }
     const anonymizedRecord = {};
     for (const col in record) {
-      let selectedFilter = anonTypes[col];
+      let selectedFilter = transformTypes[col];
       if (FIELD_TYPES[selectedFilter]) {
         selectedFilter = FIELD_TYPES[selectedFilter][selectedMode];
       }
       // If no option supplied or Transform not specified
       if (!selectedFilter || !Transforms[selectedFilter]) {
-        anonymizedRecord[col] = Transforms[ANON_TYPES.NONE].process(
+        anonymizedRecord[col] = Transforms[TRANSFORM_TYPES.NONE].process(
           record[col]
         );
       } else {

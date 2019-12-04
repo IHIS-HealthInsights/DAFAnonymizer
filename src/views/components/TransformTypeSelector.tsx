@@ -1,14 +1,14 @@
 import React from "react";
-import { ANON_TYPES, FIELD_TYPES } from "../../anonymizer/Types";
+import { TRANSFORM_TYPES, FIELD_TYPES } from "../../anonymizer/Types";
 import { Select } from "antd";
 const { Option, OptGroup } = Select;
 
-const AnonTypeSelector = props => {
+const TransformTypeSelector = props => {
   return (
     <Select
       showSearch
       placeholder="Select Transformation"
-      onChange={props.onAnonTypeChange}
+      onChange={props.onTransformTypeChange}
       value={props.value}
       filterOption={(input, option) => {
         if (typeof option.props.children === "object") {
@@ -24,10 +24,10 @@ const AnonTypeSelector = props => {
       }}
     >
       <OptGroup label="Transform Types">
-        {Object.keys(ANON_TYPES).map(type => {
+        {Object.keys(TRANSFORM_TYPES).map(type => {
           return (
             <Option key={type} value={type}>
-              {ANON_TYPES[type]}
+              {TRANSFORM_TYPES[type]}
             </Option>
           );
         })}
@@ -45,4 +45,4 @@ const AnonTypeSelector = props => {
   );
 };
 
-export default AnonTypeSelector;
+export default TransformTypeSelector;
