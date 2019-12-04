@@ -7,8 +7,9 @@ const AnonTypeSelector = props => {
   return (
     <Select
       showSearch
-      placeholder="Select Filter"
+      placeholder="Select Transformation"
       onChange={props.onAnonTypeChange}
+      value={props.value}
       filterOption={(input, option) => {
         if (typeof option.props.children === "object") {
           return (option.props.children as any[]).find(n => {
@@ -31,7 +32,7 @@ const AnonTypeSelector = props => {
           );
         })}
       </OptGroup>
-      <OptGroup label="Field Types">
+      <OptGroup label="DAFAA Field Types">
         {Object.keys(FIELD_TYPES).map(type => {
           return (
             <Option key={type} value={type}>

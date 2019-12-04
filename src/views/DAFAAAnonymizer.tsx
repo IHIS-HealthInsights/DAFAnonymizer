@@ -52,6 +52,7 @@ const DAFAAAnonymizer = () => {
           <strong>{key.toUpperCase()}</strong>
           <br />
           <AnonTypeSelector
+            value={anonTypes[key]}
             onAnonTypeChange={value =>
               setAnonTypes({
                 ...anonTypes,
@@ -125,6 +126,7 @@ const DAFAAAnonymizer = () => {
             previewData = previewData.concat(data);
           },
           complete: () => {
+            setAnonTypes({}); // Reset in case there was a previous upload
             setFileReadPercent(100);
             // Add incrementing key to each record
             previewData = previewData.map((d, i) => ({ ...d, key: i }));
@@ -202,6 +204,7 @@ const DAFAAAnonymizer = () => {
                 complete: () => {
                   // Set as complete after DEBOUNCE so that it will not get skipped
                   setTimeout(() => setProcessFileReadPercent(100), DEBOUNCE_MS);
+                  setProcessFileTransformPercent(0);
                   // Push computation to web worker
                   anonymizerWorker.postMessage({
                     rawData,
