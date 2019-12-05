@@ -1,7 +1,8 @@
-import React from "react";
 import * as CryptoJS from "crypto-js";
-import { TRANSFORM_TYPES } from "./Types";
+import React from "react";
+
 import * as Matchers from "./Matchers";
+import { FIELD_TYPES, TRANSFORM_TYPES } from "./Types";
 
 const key = CryptoJS.lib.WordArray.random(16);
 const iv = CryptoJS.lib.WordArray.random(16);
@@ -75,6 +76,31 @@ const Transforms: Record<string, ITransform> = {
       return null;
     }
   }
+};
+
+export const resolveTransformStr = (
+  mode: string,
+  transformOrFieldType?: string
+): string => {
+  if (!transformOrFieldType) return TRANSFORM_TYPES.NONE;
+
+  if (FIELD_TYPES[transformOrFieldType]) {
+    return FIELD_TYPES[transformOrFieldType][mode] || TRANSFORM_TYPES.NONE;
+  } else if (TRANSFORM_TYPES[transformOrFieldType]) {
+    return transformOrFieldType;
+  } else {
+    return TRANSFORM_TYPES.NONE;
+  }
+};
+
+export const resolveTransform = (
+  mode: string,
+  transformOrFieldType?: string
+): ITransform => {
+  return (
+    Transforms[resolveTransformStr(mode, transformOrFieldType)] ||
+    Transforms[TRANSFORM_TYPES.NONE]
+  );
 };
 
 export default Transforms;

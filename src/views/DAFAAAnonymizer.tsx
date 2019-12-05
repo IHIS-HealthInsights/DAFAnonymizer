@@ -1,14 +1,15 @@
-import { Button, PageHeader, Radio, Steps, Table, Card, Progress } from "antd";
+import { useDebounce } from "@react-hook/debounce";
+import { Button, Card, Descriptions, PageHeader, Progress, Radio, Steps, Table } from "antd";
 import Papa from "papaparse";
 import React, { useState } from "react";
-import { useDebounce } from "@react-hook/debounce";
-
-import Transforms from "../anonymizer/Transforms";
-import { TRANSFORM_TYPES, FIELD_TYPES } from "../anonymizer/Types";
-import TransformTypeSelector from "./components/TransformTypeSelector";
-import FileUploader from "./components/FileUploader";
 /* eslint import/no-webpack-loader-syntax: off */
 import AnonymizerWorker from "worker-loader!../workers/anonymizer.worker";
+
+import { resolveTransform } from "../anonymizer/Transforms";
+import FileUploader from "./components/FileUploader";
+import TransformSummary from "./components/TransformSummary";
+import TransformTypeSelector from "./components/TransformTypeSelector";
+
 const anonymizerWorker = new AnonymizerWorker();
 
 const { Step } = Steps;
@@ -32,16 +33,18 @@ const DAFAAAnonymizer = () => {
     setProcessFileTransformPercent
   ] = useDebounce(0, DEBOUNCE_MS, true);
   const [previewData, setPreviewData] = useState([]);
-  const [transformTypes, setTransformTypes] = useState({});
+  const [selectedTransforms, setSelectedTransforms] = useState({});
   const [currentStep, setCurrentStep] = useState(0);
   const [previewCount, setPreviewCount] = useState(100);
   const [hasHeader, setHasHeader] = useState(true);
   const [selectedMode, setSelectedMode] = useState("modeB");
-  let columnsConfig = [];
 
   // Derive columns spec from the data
+  let columnsConfig = [];
+  let colKeys = [];
+
   if (previewData.length) {
-    const colKeys = Object.keys(previewData[0]).filter(key => key !== "key");
+    colKeys = Object.keys(previewData[0]).filter(key => key !== "key");
     const isFixedMode = colKeys.length >= SCROLL_COLUMNS_THRESHOLD;
     columnsConfig = colKeys.map((key, i) => ({
       fixed: isFixedMode && i === 0 ? "left" : null,
@@ -52,10 +55,10 @@ const DAFAAAnonymizer = () => {
           <strong>{key.toUpperCase()}</strong>
           <br />
           <TransformTypeSelector
-            value={transformTypes[key]}
+            value={selectedTransforms[key]}
             onTransformTypeChange={value =>
-              setTransformTypes({
-                ...transformTypes,
+              setSelectedTransforms({
+                ...selectedTransforms,
                 [key]: value
               })
             }
@@ -64,15 +67,9 @@ const DAFAAAnonymizer = () => {
       ),
       dataIndex: key,
       render: text => {
-        let selectedFilter = transformTypes[key];
-        if (FIELD_TYPES[selectedFilter]) {
-          selectedFilter = FIELD_TYPES[selectedFilter][selectedMode];
-        }
-        // If no option supplied or Transform not specified
-        if (!selectedFilter || !Transforms[selectedFilter]) {
-          return Transforms[TRANSFORM_TYPES.NONE].preview(text);
-        }
-        return Transforms[selectedFilter].preview(text);
+        return resolveTransform(selectedMode, selectedTransforms[key]).preview(
+          text
+        );
       }
     }));
   }
@@ -126,7 +123,7 @@ const DAFAAAnonymizer = () => {
             previewData = previewData.concat(data);
           },
           complete: () => {
-            setTransformTypes({}); // Reset in case there was a previous upload
+            setSelectedTransforms({}); // Reset in case there was a previous upload
             setFileReadPercent(100);
             // Add incrementing key to each record
             previewData = previewData.map((d, i) => ({ ...d, key: i }));
@@ -137,6 +134,83 @@ const DAFAAAnonymizer = () => {
         });
       });
     }
+  };
+
+  const onAnonymizeDownload = () => {
+    let rawData = [];
+    Papa.parse(userFile, {
+      skipEmptyLines: true,
+      header: hasHeader,
+      worker: true,
+      chunk: ({ data, errors, meta }) => {
+        if (!data.length) {
+          alert("CSV file is empty");
+          return;
+        }
+
+        if (errors.length) {
+          console.error(errors);
+          alert("Failed to write CSV file");
+          return;
+        }
+
+        if (!hasHeader) {
+          // Convert 2d array into objects with generated header
+          const numCols = data[0].length;
+          data = data.map(row => {
+            const d = {};
+            for (let i = 0; i < numCols; i++) {
+              d[`Column${i + 1}`] = row[i];
+            }
+            return d;
+          });
+        }
+        setProcessFileReadPercent(
+          Math.round((meta.cursor / userFile.size) * 100)
+        );
+        rawData = rawData.concat(data);
+      },
+      complete: () => {
+        // Set as complete after DEBOUNCE so that it will not get skipped
+        setTimeout(() => setProcessFileReadPercent(100), DEBOUNCE_MS);
+        setProcessFileTransformPercent(0);
+        // Push computation to web worker
+        anonymizerWorker.postMessage({
+          rawData,
+          selectedTransforms,
+          selectedMode
+        });
+        // Listen for completion and progress updates
+        anonymizerWorker.onmessage = ({ data }) => {
+          if (data.type === "UPDATE_PROGRESS") {
+            setProcessFileTransformPercent(data.progress);
+          } else if (data.type === "COMPLETE") {
+            console.log("Anonymizing complete");
+            const anonymizedData = data.result;
+            // Trigger user download
+            const element = document.createElement("a");
+            const file = new Blob(
+              [
+                Papa.unparse(anonymizedData, {
+                  skipEmptyLines: true
+                })
+              ],
+              {
+                type: "text/csv"
+              }
+            );
+            element.href = URL.createObjectURL(file);
+
+            // Set as complete after DEBOUNCE so that it will not get skipped
+            setTimeout(() => setProcessFileTransformPercent(100), DEBOUNCE_MS);
+
+            element.download = "anonymized.csv";
+            document.body.appendChild(element); // Required for this to work in FireFox
+            element.click();
+          }
+        };
+      }
+    });
   };
 
   const steps = [
@@ -165,108 +239,57 @@ const DAFAAAnonymizer = () => {
       title: "Anonymize",
       content: (
         <Card>
-          <Button
-            type="primary"
-            onClick={() => {
-              let rawData = [];
-              Papa.parse(userFile, {
-                skipEmptyLines: true,
-                header: hasHeader,
-                worker: true,
-                chunk: ({ data, errors, meta }) => {
-                  if (!data.length) {
-                    alert("CSV file is empty");
-                    return;
-                  }
-
-                  if (errors.length) {
-                    console.error(errors);
-                    alert("Failed to write CSV file");
-                    return;
-                  }
-
-                  if (!hasHeader) {
-                    // Convert 2d array into objects with generated header
-                    const numCols = data[0].length;
-                    data = data.map(row => {
-                      const d = {};
-                      for (let i = 0; i < numCols; i++) {
-                        d[`Column${i + 1}`] = row[i];
-                      }
-                      return d;
-                    });
-                  }
-                  setProcessFileReadPercent(
-                    Math.round((meta.cursor / userFile.size) * 100)
-                  );
-                  rawData = rawData.concat(data);
-                },
-                complete: () => {
-                  // Set as complete after DEBOUNCE so that it will not get skipped
-                  setTimeout(() => setProcessFileReadPercent(100), DEBOUNCE_MS);
-                  setProcessFileTransformPercent(0);
-                  // Push computation to web worker
-                  anonymizerWorker.postMessage({
-                    rawData,
-                    transformTypes,
-                    selectedMode
-                  });
-                  // Listen for completion and progress updates
-                  anonymizerWorker.onmessage = ({ data }) => {
-                    if (data.type === "UPDATE_PROGRESS") {
-                      setProcessFileTransformPercent(data.progress);
-                    } else if (data.type === "COMPLETE") {
-                      const anonymizedData = data.result;
-                      // Trigger user download
-                      const element = document.createElement("a");
-                      const file = new Blob(
-                        [
-                          Papa.unparse(anonymizedData, {
-                            skipEmptyLines: true
-                          })
-                        ],
-                        {
-                          type: "text/csv"
-                        }
-                      );
-                      element.href = URL.createObjectURL(file);
-                      element.download = "anonymized.csv";
-                      document.body.appendChild(element); // Required for this to work in FireFox
-                      // Set as complete after DEBOUNCE so that it will not get skipped
-                      setTimeout(
-                        () => setProcessFileTransformPercent(100),
-                        DEBOUNCE_MS
-                      );
-                      element.click();
+          <TransformSummary
+            fields={colKeys}
+            selectedTransforms={selectedTransforms}
+            selectedMode={selectedMode}
+          />
+          <br />
+          <table style={{ width: "100%", tableLayout: "fixed" }}>
+            <tbody>
+              <tr>
+                <td style={{ width: 260, textAlign: "left", paddingLeft: 0 }}>
+                  <Button
+                    size="large"
+                    type="primary"
+                    icon="download"
+                    style={{ height: 75 }}
+                    onClick={onAnonymizeDownload}
+                    loading={
+                      processFileReadPercent > 0 &&
+                      processFileTransformPercent < 100
                     }
-                  };
-                }
-              });
-            }}
-          >
-            Download Anonymized Data
-          </Button>
-          {processFileReadPercent > 0 ? (
-            <div>
-              <strong>File read progress:</strong>
-              <Progress
-                strokeColor={{
-                  from: "#108ee9",
-                  to: "#87d068"
-                }}
-                percent={processFileReadPercent}
-              />
-              <br />
-              <strong>Anonymization progress:</strong>
-              <Progress
-                strokeColor={{
-                  from: "#108ee9",
-                  to: "#87d068"
-                }}
-                percent={processFileTransformPercent}
-              />
-            </div>
-          ) : null}
+                  >
+                    Anonymize and Download
+                  </Button>
+                </td>
+                <td>
+                  {processFileReadPercent > 0 ? (
+                    <Descriptions column={1} bordered size="small">
+                      <Descriptions.Item label="File Read Progress">
+                        <Progress
+                          strokeColor={{
+                            from: "#108ee9",
+                            to: "#87d068"
+                          }}
+                          percent={processFileReadPercent}
+                        />
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Anonymization Progress">
+                        <Progress
+                          strokeColor={{
+                            from: "#108ee9",
+                            to: "#87d068"
+                          }}
+                          percent={processFileTransformPercent}
+                        />
+                      </Descriptions.Item>
+                    </Descriptions>
+                  ) : null}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </Card>
       )
     }

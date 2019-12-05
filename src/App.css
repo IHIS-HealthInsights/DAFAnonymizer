@@ -43,3 +43,8 @@
 .ant-steps-item-container {
   cursor: pointer;
 }
+
+.ant-descriptions-item-label {
+  text-align: left;
+  width: 150px;
+}

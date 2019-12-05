@@ -1,14 +1,26 @@
-import Transforms from "../anonymizer/Transforms";
-import { TRANSFORM_TYPES, FIELD_TYPES } from "../anonymizer/Types";
-import "./custom.d"; // This is required for worker-loader - typescript integration
+import Transforms, { resolveTransform } from "../anonymizer/Transforms";
+import { FIELD_TYPES, TRANSFORM_TYPES } from "../anonymizer/Types";
+
+// This is required for worker-loader - typescript integration
+import "./custom.d";
 
 const ctx: Worker = self as any;
 
 ctx.onmessage = event => {
-  const { rawData, transformTypes, selectedMode } = event.data;
+  const { rawData, selectedTransforms, selectedMode } = event.data;
   const anonymizedData = [];
   let processedCount = 0;
   let totalCount = rawData.length;
+
+  if (!rawData.length) {
+    return;
+  }
+
+  // Resolve transformations to be applied once, assume that every record has the same keys
+  const transforms = {};
+  for (const col in rawData[0]) {
+    transforms[col] = resolveTransform(selectedMode, selectedTransforms[col]);
+  }
 
   for (const record of rawData) {
     if (processedCount % 10000 === 0) {
@@ -19,21 +31,10 @@ ctx.onmessage = event => {
     }
     const anonymizedRecord = {};
     for (const col in record) {
-      let selectedFilter = transformTypes[col];
-      if (FIELD_TYPES[selectedFilter]) {
-        selectedFilter = FIELD_TYPES[selectedFilter][selectedMode];
-      }
-      // If no option supplied or Transform not specified
-      if (!selectedFilter || !Transforms[selectedFilter]) {
-        anonymizedRecord[col] = Transforms[TRANSFORM_TYPES.NONE].process(
-          record[col]
-        );
-      } else {
-        const output = Transforms[selectedFilter].process(record[col]);
-        if (output !== null) {
-          // null means that the column will be dropped
-          anonymizedRecord[col] = output;
-        }
+      const output = transforms[col].process(record[col]);
+      if (output !== null) {
+        // null means that the column will be dropped
+        anonymizedRecord[col] = output;
       }
     }
     anonymizedData.push(anonymizedRecord);
