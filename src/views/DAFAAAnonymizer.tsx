@@ -1,5 +1,14 @@
 import { useDebounce } from "@react-hook/debounce";
-import { Button, Card, Descriptions, PageHeader, Progress, Radio, Steps, Table } from "antd";
+import {
+  Button,
+  Card,
+  Descriptions,
+  PageHeader,
+  Progress,
+  Radio,
+  Steps,
+  Table
+} from "antd";
 import Papa from "papaparse";
 import React, { useState } from "react";
 /* eslint import/no-webpack-loader-syntax: off */
@@ -48,7 +57,7 @@ const DAFAAAnonymizer = () => {
     const isFixedMode = colKeys.length >= SCROLL_COLUMNS_THRESHOLD;
     columnsConfig = colKeys.map((key, i) => ({
       fixed: isFixedMode && i === 0 ? "left" : null,
-      width: isFixedMode && i === 0 ? 250 : undefined,
+      width: 250,
       ellipsis: true,
       title: (
         <div style={{ width: "100%" }}>
@@ -66,11 +75,8 @@ const DAFAAAnonymizer = () => {
         </div>
       ),
       dataIndex: key,
-      render: text => {
-        return resolveTransform(selectedMode, selectedTransforms[key]).preview(
-          text
-        );
-      }
+      render: text =>
+        resolveTransform(selectedMode, selectedTransforms[key]).preview(text)
     }));
   }
 
