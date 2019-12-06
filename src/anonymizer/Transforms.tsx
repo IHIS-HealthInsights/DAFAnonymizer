@@ -20,21 +20,31 @@ const Transforms: Record<string, ITransform> = {
   [TRANSFORM_TYPES.NONE]: {
     preview: function(text) {
       // Match and highlight sensitive values
-      let matches = [...text.split(Matchers.NRIC)];
-      let output = [];
+      const matches = new Matchers.NricMatcher().match(text);
+
+      if (!matches.length) return text;
+      const output = [];
+      let curIndex = 0;
+
       for (let i = 0; i < matches.length; i++) {
         const match = matches[i];
-        if (match.length === 0) continue;
-        if (match.match(Matchers.NRIC)) {
-          output.push(
-            <span key={i} style={{ backgroundColor: "yellow" }}>
-              {match}
-            </span>
-          );
-        } else {
-          output.push(<span key={i}>{match}</span>);
-        }
+        output.push(
+          <span key={i + matches.length}>
+            {text.substring(curIndex, match.start)}
+          </span>
+        );
+
+        output.push(
+          <span key={i} style={{ backgroundColor: "yellow" }}>
+            {text.substring(match.start, match.end)}
+          </span>
+        );
+        curIndex = match.end;
       }
+      output.push(
+        <span key="last">{text.substring(curIndex, text.length)}</span>
+      );
+
       return <div>{output}</div>;
     },
     process: function(text) {
