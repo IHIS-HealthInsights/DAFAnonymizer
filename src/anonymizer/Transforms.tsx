@@ -44,8 +44,8 @@ const Transforms: Record<string, ITransform> = {
       output.push(
         <span key="last">{text.substring(curIndex, text.length)}</span>
       );
-
-      return <div>{output}</div>;
+      // apply max width scrolling since spans interfere with ellipsis=true
+      return <div style={{ overflowX: "scroll", maxWidth: 230 }}>{output}</div>;
     },
     process: function(text) {
       return text;
