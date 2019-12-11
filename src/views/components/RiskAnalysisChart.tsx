@@ -9,7 +9,7 @@ const RiskAnalysisChart = ({ data }) => (
     }}
     yScale={{
       type: "linear",
-      stacked: true,
+      stacked: false,
       min: 0,
       max: 100
     }}
