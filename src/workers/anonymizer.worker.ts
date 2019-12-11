@@ -45,5 +45,3 @@ ctx.onmessage = event => {
     result: anonymizedData
   });
 };
-
-ctx.postMessage({ foo: "foo" });

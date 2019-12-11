@@ -11,15 +11,20 @@ import {
 } from "antd";
 import Papa from "papaparse";
 import React, { useState } from "react";
+
 /* eslint import/no-webpack-loader-syntax: off */
 import AnonymizerWorker from "worker-loader!../workers/anonymizer.worker";
+import RiskAnalyzerWorker from "worker-loader!../workers/riskAnalyzer.worker";
 
 import { resolveTransform } from "../anonymizer/Transforms";
 import FileUploader from "./components/FileUploader";
 import TransformSummary from "./components/TransformSummary";
 import TransformTypeSelector from "./components/TransformTypeSelector";
+import QISelector from "./components/QISelector";
+import RiskAnalysisChart from "./components/RiskAnalysisChart";
 
 const anonymizerWorker = new AnonymizerWorker();
+const riskAnalyzerWorker = new RiskAnalyzerWorker();
 
 const { Step } = Steps;
 
@@ -47,6 +52,9 @@ const DAFAAAnonymizer = () => {
   const [previewCount, setPreviewCount] = useState(100);
   const [hasHeader, setHasHeader] = useState(true);
   const [selectedMode, setSelectedMode] = useState("modeB");
+  const [selectedQuasiIdentifiers, setSelectedQuasiIdentifiers] = useState([]);
+  const [riskAnalysisPercent, setRiskAnalysisPercent] = useState(100);
+  const [riskAnalysisChartData, setRiskAnalysisChartData] = useState();
 
   // Derive columns spec from the data
   let columnsConfig = [];
@@ -219,6 +227,65 @@ const DAFAAAnonymizer = () => {
     });
   };
 
+  const generateRiskReport = () => {
+    setRiskAnalysisPercent(0);
+    let rawData = [];
+    Papa.parse(userFile, {
+      skipEmptyLines: true,
+      header: hasHeader,
+      worker: true,
+      chunk: ({ data, errors, meta }) => {
+        if (!data.length) {
+          alert("CSV file is empty");
+          return;
+        }
+        if (errors.length) {
+          console.error(errors);
+          alert("Failed to write CSV file");
+          return;
+        }
+        if (!hasHeader) {
+          // Convert 2d array into objects with generated header
+          const numCols = data[0].length;
+          data = data.map(row => {
+            const d = {};
+            for (let i = 0; i < numCols; i++) {
+              d[`Column${i + 1}`] = row[i];
+            }
+            return d;
+          });
+        }
+        setProcessFileReadPercent(
+          Math.round((meta.cursor / userFile.size) * 100)
+        );
+        rawData = rawData.concat(data);
+      },
+      complete: () => {
+        // Push computation to web worker
+        riskAnalyzerWorker.postMessage({
+          rawData,
+          quasiIdentifiers: selectedQuasiIdentifiers
+        });
+        // Listen for completion and progress updates
+        riskAnalyzerWorker.onmessage = ({ data }) => {
+          if (data.type === "COMPLETE") {
+            const chart = [];
+            chart.push({
+              id: "RecordLoss",
+              data: data.result.recordLoss
+            });
+            chart.push({
+              id: "EqClassLoss",
+              data: data.result.eqClassLoss
+            });
+            setRiskAnalysisChartData(chart);
+            setRiskAnalysisPercent(100);
+          }
+        };
+      }
+    });
+  };
+
   const steps = [
     {
       index: 0,
@@ -229,12 +296,11 @@ const DAFAAAnonymizer = () => {
     },
     {
       index: 1,
-      title: "Apply Filters",
+      title: "Apply Transformations",
       content: (
         <Table
           dataSource={previewData}
           columns={columnsConfig}
-          rowKey={record => record.key}
           pagination={{ pageSize: 50 }}
           scroll={{ x: 1000, y: 700 }}
         ></Table>
@@ -242,6 +308,38 @@ const DAFAAAnonymizer = () => {
     },
     {
       index: 2,
+      title: "Risk Analysis",
+      content: (
+        <Card>
+          <div style={{ display: "flex" }}>
+            <strong style={{ marginRight: 10, textAlign: "right" }}>
+              Quasi Identifiers
+            </strong>
+            <QISelector
+              colKeys={colKeys}
+              selectedQuasiIdentifiers={selectedQuasiIdentifiers}
+              setSelectedQuasiIdentifiers={setSelectedQuasiIdentifiers}
+            />
+            <Button
+              style={{ marginLeft: 10 }}
+              size="large"
+              type="primary"
+              onClick={generateRiskReport}
+              loading={riskAnalysisPercent >= 0 && riskAnalysisPercent < 100}
+            >
+              Run Analysis
+            </Button>
+          </div>
+          {riskAnalysisChartData ? (
+            <div style={{ height: 500, marginTop: 10 }}>
+              <RiskAnalysisChart data={riskAnalysisChartData} />
+            </div>
+          ) : null}
+        </Card>
+      )
+    },
+    {
+      index: 3,
       title: "Anonymize",
       content: (
         <Card>
