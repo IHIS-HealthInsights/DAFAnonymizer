@@ -1,7 +1,7 @@
-import React from "react";
+import React, { ReactNode } from "react";
 import { ResponsiveLine } from "@nivo/line";
 
-const RiskAnalysisChart = ({ data }) => (
+const RiskAnalysisChart = ({ data, setPreviewRiskRecordsK }) => (
   <ResponsiveLine
     data={data}
     xScale={{
@@ -14,7 +14,6 @@ const RiskAnalysisChart = ({ data }) => (
       max: 100
     }}
     margin={{ top: 10, right: 50, bottom: 50, left: 50 }}
-    enableCrosshair={true}
     axisBottom={{
       orient: "bottom",
       tickSize: 5,
@@ -33,7 +32,7 @@ const RiskAnalysisChart = ({ data }) => (
       legendPosition: "middle",
       legendOffset: -35
     }}
-    colors={{ scheme: "nivo" }}
+    colors={["red", "orange"]}
     pointSize={10}
     pointColor={{ theme: "background" }}
     pointBorderWidth={2}
@@ -41,20 +40,13 @@ const RiskAnalysisChart = ({ data }) => (
     pointLabel="y"
     pointLabelYOffset={-12}
     useMesh={true}
-    enableSlices="x"
-    sliceTooltip={ctx => {
-      const slice = (ctx as any).slice;
-      const k = slice.points[0].data.x;
-      let recordLossPoint;
-      let eqClassLossPoint;
-      slice.points.forEach(point => {
-        if (point.serieId === "RecordLoss") {
-          recordLossPoint = point;
-        }
-        if (point.serieId === "EqClassLoss") {
-          eqClassLossPoint = point;
-        }
-      });
+    enableCrosshair={true}
+    crosshairType={"x"}
+    tooltip={({ point }) => {
+      // based on k value, search for associated points
+      const k = parseInt(point.data.x.toString());
+      const recordLoss = data[0].data.find(o => o.x === k).y;
+      const eqClassLoss = data[1].data.find(o => o.x === k).y;
       return (
         <div
           style={{
@@ -72,17 +64,24 @@ const RiskAnalysisChart = ({ data }) => (
           <br />
           <span>{` will result in `}</span>
           <br />
-          <strong style={{ color: recordLossPoint.serieColor }}>
-            {`${recordLossPoint.data.y.toFixed(1)}%`}
+          <strong style={{ color: "red" }}>
+            {`${recordLoss.toFixed(1)}%`}
           </strong>
           <span>{` loss in number of records and `}</span>
           <br />
-          <strong style={{ color: eqClassLossPoint.serieColor }}>
-            {`${eqClassLossPoint.data.y.toFixed(1)}%`}
+          <strong style={{ color: "orange" }}>
+            {`${eqClassLoss.toFixed(1)}%`}
           </strong>
           <span>{` loss in unique combinations of QIs`}</span>
+          <br />
+          <span style={{ fontStyle: "italic", color: "grey" }}>
+            Click to preview at-risk records
+          </span>
         </div>
       );
+    }}
+    onClick={point => {
+      if (point) setPreviewRiskRecordsK(parseInt(point.data.x.toString()));
     }}
   />
 );
