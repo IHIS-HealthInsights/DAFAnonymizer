@@ -55,6 +55,8 @@ const DAFAAAnonymizer = () => {
   const [selectedQuasiIdentifiers, setSelectedQuasiIdentifiers] = useState([]);
   const [riskAnalysisPercent, setRiskAnalysisPercent] = useState(100);
   const [riskAnalysisChartData, setRiskAnalysisChartData] = useState();
+  const [anonymizeIsLoading, setAnonymizeIsLoading] = useState(false);
+  let rawData = [];
 
   // Derive columns spec from the data
   let columnsConfig = [];
@@ -112,13 +114,11 @@ const DAFAAAnonymizer = () => {
               alert("CSV file is empty");
               return;
             }
-
             if (errors.length) {
               console.error(errors);
               alert("Failed to parse CSV file");
               return;
             }
-
             if (!hasHeader) {
               // Convert 2d array into objects with generated header
               const numCols = data[0].length;
@@ -130,17 +130,24 @@ const DAFAAAnonymizer = () => {
                 return d;
               });
             }
-
             setProcessFileReadPercent(
               Math.round((readRowsCount / previewCount) * 100)
             );
             previewData = previewData.concat(data);
           },
           complete: () => {
-            setSelectedTransforms({}); // Reset in case there was a previous upload
+            // Reset in case there was a previous upload
+            setSelectedTransforms({});
+            rawData = [];
+            setSelectedQuasiIdentifiers([]);
+            setRiskAnalysisChartData([]);
+
             setFileReadPercent(100);
-            // Add incrementing key to each record
-            previewData = previewData.map((d, i) => ({ ...d, key: i }));
+            // Add incrementing key to each record for table display
+            previewData = previewData.map((d, i) => ({
+              ...d,
+              key: i
+            }));
 
             setPreviewData(previewData);
             setCurrentStep(1);
@@ -150,8 +157,49 @@ const DAFAAAnonymizer = () => {
     }
   };
 
-  const onAnonymizeDownload = () => {
-    let rawData = [];
+  const download = data => {
+    // Trigger user download of csv file from Array<object>
+    const element = document.createElement("a");
+    const file = new Blob(
+      [
+        Papa.unparse(data, {
+          skipEmptyLines: true
+        })
+      ],
+      {
+        type: "text/csv"
+      }
+    );
+    element.href = URL.createObjectURL(file);
+    element.download = "anonymized.csv";
+    document.body.appendChild(element); // Required for this to work in FireFox
+    element.click();
+  };
+
+  const anonymizeAndDownload = () => {
+    setProcessFileTransformPercent(0);
+
+    // Push computation to web worker
+    anonymizerWorker.postMessage({
+      rawData,
+      selectedTransforms,
+      selectedMode
+    });
+    // Listen for completion and progress updates
+    anonymizerWorker.onmessage = ({ data }) => {
+      if (data.type === "UPDATE_PROGRESS") {
+        setProcessFileTransformPercent(data.progress);
+      } else if (data.type === "COMPLETE") {
+        console.log("Anonymizing complete");
+        download(data.result);
+        // Set as complete after DEBOUNCE so that it will not get skipped
+        setTimeout(() => setProcessFileTransformPercent(100), DEBOUNCE_MS);
+        setAnonymizeIsLoading(false);
+      }
+    };
+  };
+
+  const readFullFile = complete => {
     Papa.parse(userFile, {
       skipEmptyLines: true,
       header: hasHeader,
@@ -161,13 +209,11 @@ const DAFAAAnonymizer = () => {
           alert("CSV file is empty");
           return;
         }
-
         if (errors.length) {
           console.error(errors);
           alert("Failed to write CSV file");
           return;
         }
-
         if (!hasHeader) {
           // Convert 2d array into objects with generated header
           const numCols = data[0].length;
@@ -184,106 +230,60 @@ const DAFAAAnonymizer = () => {
         );
         rawData = rawData.concat(data);
       },
-      complete: () => {
-        // Set as complete after DEBOUNCE so that it will not get skipped
-        setTimeout(() => setProcessFileReadPercent(100), DEBOUNCE_MS);
-        setProcessFileTransformPercent(0);
-        // Push computation to web worker
-        anonymizerWorker.postMessage({
-          rawData,
-          selectedTransforms,
-          selectedMode
-        });
-        // Listen for completion and progress updates
-        anonymizerWorker.onmessage = ({ data }) => {
-          if (data.type === "UPDATE_PROGRESS") {
-            setProcessFileTransformPercent(data.progress);
-          } else if (data.type === "COMPLETE") {
-            console.log("Anonymizing complete");
-            const anonymizedData = data.result;
-            // Trigger user download
-            const element = document.createElement("a");
-            const file = new Blob(
-              [
-                Papa.unparse(anonymizedData, {
-                  skipEmptyLines: true
-                })
-              ],
-              {
-                type: "text/csv"
-              }
-            );
-            element.href = URL.createObjectURL(file);
-
-            // Set as complete after DEBOUNCE so that it will not get skipped
-            setTimeout(() => setProcessFileTransformPercent(100), DEBOUNCE_MS);
-
-            element.download = "anonymized.csv";
-            document.body.appendChild(element); // Required for this to work in FireFox
-            element.click();
-          }
-        };
-      }
+      complete: complete
     });
   };
 
+  const onAnonymizeDownload = () => {
+    setAnonymizeIsLoading(true);
+    if (rawData.length > 0) {
+      // Data has already been loaded
+      anonymizeAndDownload();
+    } else {
+      readFullFile(() => {
+        // Set as complete after DEBOUNCE so that it will not get skipped
+        setTimeout(() => setProcessFileReadPercent(100), DEBOUNCE_MS);
+        anonymizeAndDownload();
+      });
+    }
+  };
+
   const generateRiskReport = () => {
-    setRiskAnalysisPercent(0);
-    let rawData = [];
-    Papa.parse(userFile, {
-      skipEmptyLines: true,
-      header: hasHeader,
-      worker: true,
-      chunk: ({ data, errors, meta }) => {
-        if (!data.length) {
-          alert("CSV file is empty");
-          return;
-        }
-        if (errors.length) {
-          console.error(errors);
-          alert("Failed to write CSV file");
-          return;
-        }
-        if (!hasHeader) {
-          // Convert 2d array into objects with generated header
-          const numCols = data[0].length;
-          data = data.map(row => {
-            const d = {};
-            for (let i = 0; i < numCols; i++) {
-              d[`Column${i + 1}`] = row[i];
-            }
-            return d;
-          });
-        }
-        setProcessFileReadPercent(
-          Math.round((meta.cursor / userFile.size) * 100)
-        );
-        rawData = rawData.concat(data);
-      },
-      complete: () => {
-        // Push computation to web worker
-        riskAnalyzerWorker.postMessage({
-          rawData,
-          quasiIdentifiers: selectedQuasiIdentifiers
-        });
-        // Listen for completion and progress updates
-        riskAnalyzerWorker.onmessage = ({ data }) => {
-          if (data.type === "COMPLETE") {
-            const chart = [];
-            chart.push({
-              id: "RecordLoss",
-              data: data.result.recordLoss
-            });
-            chart.push({
-              id: "EqClassLoss",
-              data: data.result.eqClassLoss
-            });
-            setRiskAnalysisChartData(chart);
-            setRiskAnalysisPercent(100);
-          }
-        };
-      }
+    // Push computation to web worker
+    riskAnalyzerWorker.postMessage({
+      rawData,
+      quasiIdentifiers: selectedQuasiIdentifiers
     });
+    // Listen for completion and progress updates
+    riskAnalyzerWorker.onmessage = ({ data }) => {
+      if (data.type === "COMPLETE") {
+        const chart = [];
+        chart.push({
+          id: "RecordLoss",
+          data: data.result.recordLoss
+        });
+        chart.push({
+          id: "EqClassLoss",
+          data: data.result.eqClassLoss
+        });
+        setRiskAnalysisChartData(chart);
+        setRiskAnalysisPercent(100);
+      }
+    };
+  };
+
+  const onGenerateRiskReport = () => {
+    setRiskAnalysisPercent(0);
+    if (rawData.length > 0) {
+      // Data has already been loaded
+      generateRiskReport();
+    } else {
+      readFullFile(() => {
+        // Set as complete after DEBOUNCE so that it will not get skipped
+        setTimeout(() => setProcessFileReadPercent(100), DEBOUNCE_MS);
+        generateRiskReport();
+      });
+    }
   };
 
   const steps = [
@@ -324,7 +324,7 @@ const DAFAAAnonymizer = () => {
               style={{ marginLeft: 10 }}
               size="large"
               type="primary"
-              onClick={generateRiskReport}
+              onClick={onGenerateRiskReport}
               loading={riskAnalysisPercent >= 0 && riskAnalysisPercent < 100}
             >
               Run Analysis
@@ -359,10 +359,7 @@ const DAFAAAnonymizer = () => {
                     icon="download"
                     style={{ height: 75 }}
                     onClick={onAnonymizeDownload}
-                    loading={
-                      processFileReadPercent > 0 &&
-                      processFileTransformPercent < 100
-                    }
+                    loading={anonymizeIsLoading}
                   >
                     Anonymize and Download
                   </Button>
