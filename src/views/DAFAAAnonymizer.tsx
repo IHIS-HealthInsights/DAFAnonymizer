@@ -332,6 +332,7 @@ const DAFAAAnonymizer = () => {
           </div>
           {riskAnalysisChartData ? (
             <div style={{ height: 500, marginTop: 10 }}>
+              <strong>Risk vs Utility Tradeoff</strong>
               <RiskAnalysisChart data={riskAnalysisChartData} />
             </div>
           ) : null}

@@ -39,7 +39,22 @@ function nested_groupby(data: object[], keys: string[]) {
   }, {});
 }
 
-const GRAPH_KVALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 50, 100, 200];
+const GRAPH_KVALUES = [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  20,
+  50,
+  100,
+  200
+].reverse();
 
 ctx.onmessage = event => {
   const { rawData, quasiIdentifiers } = event.data;

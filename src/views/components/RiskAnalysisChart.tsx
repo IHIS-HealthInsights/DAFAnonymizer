@@ -13,14 +13,14 @@ const RiskAnalysisChart = ({ data }) => (
       min: 0,
       max: 100
     }}
-    margin={{ top: 50, right: 50, bottom: 50, left: 50 }}
+    margin={{ top: 10, right: 50, bottom: 50, left: 50 }}
     enableCrosshair={true}
     axisBottom={{
       orient: "bottom",
       tickSize: 5,
       tickPadding: 5,
       tickRotation: 0,
-      legend: "k-Anonymity Values",
+      legend: "k-Anonymity value (Risk increases to the right →)",
       legendPosition: "middle",
       legendOffset: 35
     }}
@@ -29,7 +29,7 @@ const RiskAnalysisChart = ({ data }) => (
       tickSize: 5,
       tickPadding: 5,
       tickRotation: 0,
-      legend: "Percentage Loss",
+      legend: "Utility Loss",
       legendPosition: "middle",
       legendOffset: -35
     }}
