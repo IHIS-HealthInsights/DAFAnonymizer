@@ -438,48 +438,47 @@ const DAFAAAnonymizer = () => {
             selectedMode={selectedMode}
           />
           <br />
-          <table style={{ width: "100%", tableLayout: "fixed" }}>
-            <tbody>
-              <tr>
-                <td style={{ width: 260, textAlign: "left", paddingLeft: 0 }}>
-                  <Button
-                    size="large"
-                    type="primary"
-                    icon="download"
-                    style={{ height: 75 }}
-                    onClick={onAnonymizeDownload}
-                    loading={anonymizeIsLoading}
-                  >
-                    Anonymize and Download
-                  </Button>
-                </td>
-                <td>
-                  {processFileReadPercent > 0 ? (
-                    <Descriptions column={1} bordered size="small">
-                      <Descriptions.Item label="File Read Progress">
-                        <Progress
-                          strokeColor={{
-                            from: "#108ee9",
-                            to: "#87d068"
-                          }}
-                          percent={processFileReadPercent}
-                        />
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Anonymization Progress">
-                        <Progress
-                          strokeColor={{
-                            from: "#108ee9",
-                            to: "#87d068"
-                          }}
-                          percent={processFileTransformPercent}
-                        />
-                      </Descriptions.Item>
-                    </Descriptions>
-                  ) : null}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div style={{ display: "flex" }}>
+            <div style={{ width: 260, textAlign: "left", paddingLeft: 0 }}>
+              <Button
+                size="large"
+                type="primary"
+                icon="download"
+                style={{ height: 75 }}
+                onClick={onAnonymizeDownload}
+                loading={anonymizeIsLoading}
+              >
+                Anonymize and Download
+              </Button>
+            </div>
+            {processFileReadPercent > 0 ? (
+              <Descriptions
+                column={1}
+                bordered
+                size="small"
+                style={{ width: "100%", marginLeft: 20 }}
+              >
+                <Descriptions.Item label="File Read Progress">
+                  <Progress
+                    strokeColor={{
+                      from: "#108ee9",
+                      to: "#87d068"
+                    }}
+                    percent={processFileReadPercent}
+                  />
+                </Descriptions.Item>
+                <Descriptions.Item label="Anonymization Progress">
+                  <Progress
+                    strokeColor={{
+                      from: "#108ee9",
+                      to: "#87d068"
+                    }}
+                    percent={processFileTransformPercent}
+                  />
+                </Descriptions.Item>
+              </Descriptions>
+            ) : null}
+          </div>
         </Card>
       )
     }
