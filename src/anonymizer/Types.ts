@@ -1,6 +1,6 @@
 export const TRANSFORM_TYPES: Record<string, string> = {
   REMOVE: "REMOVE",
-  ENCRYPT: "ENCRYPT",
+  PSEUDONYMIZE: "PSEUDONYMIZE",
   TRUNCATE: "TRUNCATE",
   SUPPRESS: "SUPPRESS",
   NONE: "NONE"
@@ -14,8 +14,8 @@ export const FIELD_TYPES: Record<string, Record<string, string>> = {
   },
   NRIC: {
     display: "NRIC",
-    modeA: TRANSFORM_TYPES.ENCRYPT,
-    modeB: TRANSFORM_TYPES.ENCRYPT
+    modeA: TRANSFORM_TYPES.PSEUDONYMIZE,
+    modeB: TRANSFORM_TYPES.PSEUDONYMIZE
   },
   CONTACT: {
     display: "Contact Info",

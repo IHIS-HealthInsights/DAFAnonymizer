@@ -4,9 +4,6 @@ import React from "react";
 import * as Matchers from "./Matchers";
 import { FIELD_TYPES, TRANSFORM_TYPES } from "./Types";
 
-const key = CryptoJS.lib.WordArray.random(16);
-const iv = CryptoJS.lib.WordArray.random(16);
-
 interface ITransform {
   preview: (text: String, args?: any[]) => React.ReactNode;
   process: (text: String, args?: any[]) => String | null;
@@ -50,19 +47,19 @@ const Transforms: Record<string, ITransform> = {
       return text;
     }
   },
-  [TRANSFORM_TYPES.ENCRYPT]: {
-    _encrypt: function(text) {
-      return CryptoJS.AES.encrypt(text, key, { iv: iv }).toString();
+  [TRANSFORM_TYPES.PSEUDONYMIZE]: {
+    _hash: function(text) {
+      return CryptoJS.SHA256(text).toString();
     },
     preview: function(text) {
       return (
         <span style={{ fontStyle: "italic", color: "blue" }}>
-          {this._encrypt(text)}
+          {`${this._hash(text).substring(0, 12)}...`}
         </span>
       );
     },
     process: function(text) {
-      return this._encrypt(text);
+      return this._hash(text);
     }
   },
   [TRANSFORM_TYPES.REMOVE]: {
