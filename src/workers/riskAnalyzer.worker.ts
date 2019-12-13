@@ -3,31 +3,19 @@ import "./custom.d";
 
 const ctx: Worker = self as any;
 
-function isArray(arg: any): arg is Array<object> {
+function isLeaf(arg: any): arg is number[] {
   return arg.length !== undefined;
 }
 
-function extractEqClasses(
-  o: object,
-  eqClasses: { count: number; samples?: object[] }[]
-) {
+function extractEqClasses(o: object, eqClasses: number[][]) {
   /**
    * Traverse through JSON object representing nested groups,
-   * for each equivalence class, collapse into array of
-   * {
-   *   count: number
-   *   samples?: object[] // only available if samples < SAMPLE_COUNT
-   * }
+   * collapsing all the indexes into a single array.
    */
   for (const key in o) {
     if (!!o[key]) {
-      if (isArray(o[key])) {
-        eqClasses.push({
-          count: o[key].length,
-          samples: o[key]
-        });
-      } else if (typeof o[key] === "number") {
-        eqClasses.push({ count: o[key] });
+      if (isLeaf(o[key])) {
+        eqClasses.push(o[key]);
       } else if (typeof o[key] === "object") {
         extractEqClasses(o[key], eqClasses);
       }
@@ -39,39 +27,34 @@ function nestedGroupby(data: object[], keys: string[]) {
   /**
    * Takes in a list of objects, form nested groups using
    * a list of key values.
-   * To optimize space, store only counts instead of
-   * every record when number of records exceed SAMPLE_COUNT.
+   * To optimize space, store only indexes instead of the actual
+   * records. Lookup against data array can be done later.
    */
 
   const groups = {};
-  for (const row of data) {
+  for (let row_index = 0; row_index < data.length; row_index++) {
+    const row = data[row_index];
     let curPointer = groups;
-    let prevPointer;
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i];
       if (curPointer[row[key]]) {
-        prevPointer = curPointer;
         curPointer = curPointer[row[key]];
       } else {
+        // if last key
         if (i + 1 === keys.length) {
-          // if last key
+          // used to store indexes of records belonging to eq class
           curPointer[row[key]] = [];
         } else {
-          curPointer[row[key]] = {}; // continue to setup for next partition
+          // continue to setup for next partition
+          curPointer[row[key]] = {};
         }
-        prevPointer = curPointer;
         curPointer = curPointer[row[key]];
       }
     }
 
-    // Push up to SAMPLE_COUNT objects, after which convert to count
-    if (isArray(curPointer)) {
-      curPointer.push(row);
-      if (curPointer.length > SAMPLE_COUNT) {
-        prevPointer[row[keys[keys.length - 1]]] = curPointer.length;
-      }
-    } else if (typeof curPointer === "number") {
-      prevPointer[row[keys[keys.length - 1]]] = curPointer += 1;
+    // Push indexes to save space, lookup later from data array
+    if (isLeaf(curPointer)) {
+      curPointer.push(row_index);
     }
   }
   return groups;
@@ -93,7 +76,6 @@ const GRAPH_KVALUES = [
   75,
   100
 ].reverse(); // reverse so that we can draw chart in order of increasing risk
-const SAMPLE_COUNT = 100;
 
 ctx.onmessage = event => {
   const { rawData, quasiIdentifiers } = event.data;
@@ -103,17 +85,17 @@ ctx.onmessage = event => {
 
   const recordLoss = [];
   const eqClassLoss = [];
-  const samples: (object[] | null)[] = [];
+  const indexes: (number[] | null)[] = [];
   GRAPH_KVALUES.forEach((k, i) => {
     let recordCount = 0;
     let classCount = 0;
     for (const c of eqClasses) {
-      if (c.count <= k) {
-        recordCount += c.count;
+      if (c.length <= k) {
+        recordCount += c.length;
         classCount += 1;
         // only add samples when exact match for k, so that we don't double count
-        if (c.count === k && c.samples) {
-          samples[i] = samples[i] ? samples[i].concat(c.samples) : c.samples;
+        if (c.length === k) {
+          indexes[i] = indexes[i] ? indexes[i].concat(c) : c;
         }
       }
     }
@@ -132,7 +114,7 @@ ctx.onmessage = event => {
     result: {
       recordLoss,
       eqClassLoss,
-      samples,
+      indexes: indexes,
       kValues: GRAPH_KVALUES,
       totalRecords: rawData.length
     }

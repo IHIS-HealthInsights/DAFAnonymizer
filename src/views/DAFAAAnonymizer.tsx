@@ -1,34 +1,25 @@
 import { useDebounce } from "@react-hook/debounce";
-import {
-  Button,
-  Card,
-  Descriptions,
-  PageHeader,
-  Progress,
-  Radio,
-  Steps,
-  Table,
-  Typography
-} from "antd";
+import { Button, Card, Descriptions, PageHeader, Progress, Radio, Steps, Table, Typography } from "antd";
 import Papa from "papaparse";
 import React, { useState } from "react";
-
 /* eslint import/no-webpack-loader-syntax: off */
 import AnonymizerWorker from "worker-loader!../workers/anonymizer.worker";
 import RiskAnalyzerWorker from "worker-loader!../workers/riskAnalyzer.worker";
 
 import { resolveTransform } from "../anonymizer/Transforms";
 import FileUploader from "./components/FileUploader";
-import TransformSummary from "./components/TransformSummary";
-import TransformTypeSelector from "./components/TransformTypeSelector";
 import QISelector from "./components/QISelector";
 import RiskAnalysisChart from "./components/RiskAnalysisChart";
+import TransformSummary from "./components/TransformSummary";
+import TransformTypeSelector from "./components/TransformTypeSelector";
 
 const anonymizerWorker = new AnonymizerWorker();
 const riskAnalyzerWorker = new RiskAnalyzerWorker();
 
 const { Step } = Steps;
 const { Title } = Typography;
+
+let rawData = []; // This could potentially be large, do not store in React state
 
 const DAFAAAnonymizer = () => {
   const DEBOUNCE_MS = 100;
@@ -67,7 +58,6 @@ const DAFAAAnonymizer = () => {
   const [anonymizeIsLoading, setAnonymizeIsLoading] = useState(false);
   const [previewRiskRecordsK, setPreviewRiskRecordsK] = useState();
   const [fieldNames, setFieldNames] = useState([]);
-  let rawData = []; // This could potentially be large, do not store in React state
 
   /**
    * Define shared functions between different views
@@ -260,31 +250,32 @@ const DAFAAAnonymizer = () => {
         });
         // Listen for completion and progress updates
         riskAnalyzerWorker.onmessage = ({ data }) => {
-          setRiskAnalysisReportData(data.result);
-          const fieldNames_qi = [...fieldNames];
-          // Move selected QI columns to the start of table, and fix the columns
-          for (const qi of selectedQuasiIdentifiers.reverse()) {
-            fieldNames_qi.splice(fieldNames_qi.indexOf(qi), 1);
-            fieldNames_qi.unshift(qi);
-          }
-          const columnConfig_qi = fieldNames_qi.map((key, i) => ({
-            fixed:
-              fieldNames.length >= SCROLL_COLUMNS_THRESHOLD &&
-              i < selectedQuasiIdentifiers.length
-                ? "left"
-                : null,
-            width: 120,
-            ellipsis: true,
-            title:
-              i < selectedQuasiIdentifiers.length ? (
-                <strong style={{ color: "blue" }}>{key.toUpperCase()}</strong>
-              ) : (
-                key.toUpperCase()
-              ),
-            dataIndex: key
-          }));
-          setRiskAnalysisReportColumnConfig(columnConfig_qi);
           if (data.type === "COMPLETE") {
+            setRiskAnalysisReportData(data.result);
+            const fieldNames_qi = [...fieldNames];
+            // Move selected QI columns to the start of table, and fix the columns
+            for (const qi of selectedQuasiIdentifiers.reverse()) {
+              fieldNames_qi.splice(fieldNames_qi.indexOf(qi), 1);
+              fieldNames_qi.unshift(qi);
+            }
+            const columnConfig_qi = fieldNames_qi.map((key, i) => ({
+              fixed:
+                fieldNames.length >= SCROLL_COLUMNS_THRESHOLD &&
+                i < selectedQuasiIdentifiers.length
+                  ? "left"
+                  : null,
+              width: 120,
+              ellipsis: true,
+              title:
+                i < selectedQuasiIdentifiers.length ? (
+                  <strong style={{ color: "blue" }}>{key.toUpperCase()}</strong>
+                ) : (
+                  key.toUpperCase()
+                ),
+              dataIndex: key
+            }));
+            setRiskAnalysisReportColumnConfig(columnConfig_qi);
+
             const chart = [];
             chart.push({
               id: "RecordLoss",
@@ -314,23 +305,21 @@ const DAFAAAnonymizer = () => {
         }
       };
 
-      let riskPreviewData;
-      let riskPreviewDataLength;
-
+      // Setup for preview table of records
+      let previewRiskData = [];
       if (riskAnalysisReportData && previewRiskRecordsK) {
-        const index = riskAnalysisReportData.kValues.indexOf(
+        const kIndex = riskAnalysisReportData.kValues.indexOf(
           previewRiskRecordsK
         );
-        riskPreviewData = riskAnalysisReportData.samples[index];
-        if (riskPreviewData) {
-          riskPreviewData = riskPreviewData.map((o, i) => {
-            // add incrementing key to make react happy
-            o.key = i;
-            return o;
+        if (riskAnalysisReportData.indexes[kIndex]) {
+          previewRiskData = riskAnalysisReportData.indexes[kIndex].map(i => {
+            const record = rawData[i];
+            record["key"] = i; // to make react happy
+            return record;
           });
-          riskPreviewDataLength = riskPreviewData.length;
         }
       }
+
       return (
         <Card>
           <div style={{ textAlign: "left" }}>
@@ -355,7 +344,7 @@ const DAFAAAnonymizer = () => {
             </Button>
           </div>
           {riskAnalysisChartData ? (
-            <div style={{ height: 300, marginBottom: 20 }}>
+            <div style={{ height: 300, marginBottom: 20, marginTop: 20 }}>
               <Title level={4}>Risk vs Utility Tradeoff</Title>
               <RiskAnalysisChart
                 data={riskAnalysisChartData}
@@ -365,24 +354,16 @@ const DAFAAAnonymizer = () => {
           ) : null}
           {riskAnalysisReportData && previewRiskRecordsK ? (
             <div style={{ marginTop: 50 }}>
-              {riskPreviewDataLength ? (
-                <Title
-                  level={4}
-                >{`Preview records with k=${previewRiskRecordsK} (${(
-                  (1 / previewRiskRecordsK) *
-                  100
-                ).toFixed(
-                  1
-                )}% re-identification risk) [${riskPreviewDataLength}/${
-                  riskAnalysisReportData.totalRecords
-                }]`}</Title>
-              ) : (
-                <Title level={4}>
-                  Nothing to preview, no samples or too many unique samples
-                </Title>
-              )}
+              <Title
+                level={4}
+              >{`Preview records with k=${previewRiskRecordsK} (${(
+                (1 / previewRiskRecordsK) *
+                100
+              ).toFixed(1)}% re-identification risk) [${
+                previewRiskData.length
+              }/${riskAnalysisReportData.totalRecords}]`}</Title>
               <Table
-                dataSource={riskPreviewData}
+                dataSource={previewRiskData}
                 columns={riskAnalysisReportColumnConfig}
                 pagination={{ pageSize: 5 }}
                 scroll={{ x: 1000, y: 300 }}
