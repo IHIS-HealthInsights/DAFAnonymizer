@@ -4,7 +4,7 @@ import React from "react";
 import { resolveTransformStr } from "../../anonymizer/Transforms";
 import { FIELD_TYPES, TRANSFORM_TYPES } from "../../anonymizer/Types";
 
-const TransformSummary = ({ selectedTransforms, selectedMode, fields }) => {
+const TransformSummary = ({ selectedTransforms, selectedMode, fieldNames }) => {
   const data = [];
   const columns = [
     {
@@ -21,7 +21,7 @@ const TransformSummary = ({ selectedTransforms, selectedMode, fields }) => {
       dataIndex: "transformType"
     }
   ];
-  for (const field of fields) {
+  for (const field of fieldNames) {
     let fieldOrTransformType =
       selectedTransforms[field] || TRANSFORM_TYPES.NONE;
     data.push({

@@ -2,11 +2,11 @@ import React from "react";
 import { Select } from "antd";
 
 const QISelector = ({
-  colKeys,
+  fieldNames,
   selectedQuasiIdentifiers,
   setSelectedQuasiIdentifiers
 }) => {
-  const filteredOptions = colKeys.filter(
+  const filteredOptions = fieldNames.filter(
     o => !selectedQuasiIdentifiers.includes(o)
   );
   return (

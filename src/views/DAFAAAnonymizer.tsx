@@ -64,150 +64,12 @@ const DAFAAAnonymizer = () => {
   const [riskAnalysisChartData, setRiskAnalysisChartData] = useState();
   const [anonymizeIsLoading, setAnonymizeIsLoading] = useState(false);
   const [previewRiskRecordsK, setPreviewRiskRecordsK] = useState();
-  let rawData = [];
+  const [fieldNames, setFieldNames] = useState([]);
+  let rawData = []; // This could potentially be large, do not store in React state
 
-  // Derive columns spec from the data
-  let columnsConfig = [];
-  let colKeys = [];
-
-  if (previewData.length) {
-    colKeys = Object.keys(previewData[0]).filter(key => key !== "key");
-    columnsConfig = colKeys.map((key, i) => ({
-      fixed:
-        colKeys.length >= SCROLL_COLUMNS_THRESHOLD && i === 0 ? "left" : null,
-      width: 250,
-      ellipsis: true,
-      title: (
-        <div style={{ width: "100%" }}>
-          <strong>{key.toUpperCase()}</strong>
-          <br />
-          <TransformTypeSelector
-            value={selectedTransforms[key]}
-            onTransformTypeChange={value =>
-              setSelectedTransforms({
-                ...selectedTransforms,
-                [key]: value
-              })
-            }
-          />
-        </div>
-      ),
-      dataIndex: key,
-      render: text =>
-        resolveTransform(selectedMode, selectedTransforms[key]).preview(text)
-    }));
-  }
-
-  const fileUploaderProps = {
-    accept: ".csv",
-    multiple: false,
-    previewCount,
-    setPreviewCount,
-    hasHeader,
-    setHasHeader,
-    // Make use of transformFile hook to read, transform, and setPreviewData on Previewer component
-    // If `resolve` is not called, data will not be uploaded
-    transformFile(file) {
-      setUserFile(file);
-      let previewData = [];
-      let readRowsCount = 0;
-
-      return new Promise(resolve => {
-        Papa.parse(file, {
-          header: hasHeader,
-          preview: previewCount,
-          skipEmptyLines: true,
-          chunk: ({ data, errors, meta }) => {
-            if (!data.length) {
-              alert("CSV file is empty");
-              return;
-            }
-            if (errors.length) {
-              console.error(errors);
-              alert("Failed to parse CSV file");
-              return;
-            }
-            if (!hasHeader) {
-              // Convert 2d array into objects with generated header
-              const numCols = data[0].length;
-              data = data.map(row => {
-                const d = {};
-                for (let i = 0; i < numCols; i++) {
-                  d[`Column${i + 1}`] = row[i];
-                }
-                return d;
-              });
-            }
-            setProcessFileReadPercent(
-              Math.round((readRowsCount / previewCount) * 100)
-            );
-            previewData = previewData.concat(data);
-          },
-          complete: () => {
-            // Reset in case there was a previous upload
-            setSelectedTransforms({});
-            rawData = [];
-            setSelectedQuasiIdentifiers([]);
-            setRiskAnalysisReportData(undefined);
-            setRiskAnalysisChartData(undefined);
-            setPreviewRiskRecordsK(undefined);
-
-            setFileReadPercent(100);
-            // Add incrementing key to each record for table display
-            previewData = previewData.map((d, i) => ({
-              ...d,
-              key: i
-            }));
-
-            setPreviewData(previewData);
-            setCurrentStep(1);
-          }
-        });
-      });
-    }
-  };
-
-  const download = data => {
-    // Trigger user download of csv file from Array<object>
-    const element = document.createElement("a");
-    const file = new Blob(
-      [
-        Papa.unparse(data, {
-          skipEmptyLines: true
-        })
-      ],
-      {
-        type: "text/csv"
-      }
-    );
-    element.href = URL.createObjectURL(file);
-    element.download = "anonymized.csv";
-    document.body.appendChild(element); // Required for this to work in FireFox
-    element.click();
-  };
-
-  const anonymizeAndDownload = () => {
-    setProcessFileTransformPercent(0);
-
-    // Push computation to web worker
-    anonymizerWorker.postMessage({
-      rawData,
-      selectedTransforms,
-      selectedMode
-    });
-    // Listen for completion and progress updates
-    anonymizerWorker.onmessage = ({ data }) => {
-      if (data.type === "UPDATE_PROGRESS") {
-        setProcessFileTransformPercent(data.progress);
-      } else if (data.type === "COMPLETE") {
-        console.log("Anonymizing complete");
-        download(data.result);
-        // Set as complete after DEBOUNCE so that it will not get skipped
-        setTimeout(() => setProcessFileTransformPercent(100), DEBOUNCE_MS);
-        setAnonymizeIsLoading(false);
-      }
-    };
-  };
+  /**
+   * Define shared functions between different views
+   */
 
   const readFullFile = complete => {
     Papa.parse(userFile, {
@@ -244,94 +106,132 @@ const DAFAAAnonymizer = () => {
     });
   };
 
-  const onAnonymizeDownload = () => {
-    setAnonymizeIsLoading(true);
-    if (rawData.length > 0) {
-      // Data has already been loaded
-      anonymizeAndDownload();
-    } else {
-      readFullFile(() => {
-        // Set as complete after DEBOUNCE so that it will not get skipped
-        setTimeout(() => setProcessFileReadPercent(100), DEBOUNCE_MS);
-        anonymizeAndDownload();
-      });
+  /**
+   * Define separate components rendered as steps
+   */
+  interface StepDefinition {
+    title: string;
+    content: () => React.ReactNode;
+    index?: number; // nullable, assign after order is fixed
+  }
+
+  const Step_UploadCSV: StepDefinition = {
+    title: "Upload CSV",
+    content: () => {
+      const fileUploaderProps = {
+        accept: ".csv",
+        multiple: false,
+        previewCount,
+        setPreviewCount,
+        hasHeader,
+        setHasHeader,
+        // Make use of transformFile hook to read, transform, and setPreviewData on Previewer component
+        // If `resolve` is not called, data will not be uploaded
+        transformFile(file) {
+          setUserFile(file);
+          let previewData = [];
+          let readRowsCount = 0;
+
+          return new Promise(resolve => {
+            Papa.parse(file, {
+              header: hasHeader,
+              preview: previewCount,
+              skipEmptyLines: true,
+              chunk: ({ data, errors, meta }) => {
+                if (!data.length) {
+                  alert("CSV file is empty");
+                  return;
+                }
+                if (errors.length) {
+                  console.error(errors);
+                  alert("Failed to parse CSV file");
+                  return;
+                }
+                if (!hasHeader) {
+                  // Convert 2d array into objects with generated header
+                  const numCols = data[0].length;
+                  data = data.map(row => {
+                    const d = {};
+                    for (let i = 0; i < numCols; i++) {
+                      d[`Column${i + 1}`] = row[i];
+                    }
+                    return d;
+                  });
+                }
+                setProcessFileReadPercent(
+                  Math.round((readRowsCount / previewCount) * 100)
+                );
+                previewData = previewData.concat(data);
+              },
+              complete: () => {
+                // Reset in case there was a previous upload
+                setSelectedTransforms({});
+                rawData = [];
+                setSelectedQuasiIdentifiers([]);
+                setRiskAnalysisReportData(undefined);
+                setRiskAnalysisChartData(undefined);
+                setPreviewRiskRecordsK(undefined);
+
+                setFileReadPercent(100);
+                // Add incrementing key to each record for table display
+                previewData = previewData.map((d, i) => ({
+                  ...d,
+                  key: i
+                }));
+
+                setPreviewData(previewData);
+                setCurrentStep(1);
+                if (previewData.length) {
+                  setFieldNames(
+                    Object.keys(previewData[0]).filter(key => key !== "key")
+                  );
+                }
+              }
+            });
+          });
+        }
+      };
+      return <FileUploader {...fileUploaderProps} progress={fileReadPercent} />;
     }
   };
 
-  const generateRiskReport = () => {
-    // Push computation to web worker
-    riskAnalyzerWorker.postMessage({
-      rawData,
-      quasiIdentifiers: selectedQuasiIdentifiers
-    });
-    // Listen for completion and progress updates
-    riskAnalyzerWorker.onmessage = ({ data }) => {
-      setRiskAnalysisReportData(data.result);
-      const colKeys_qi = [...colKeys];
-      // Move selected QI columns to the start of table, and fix the columns
-      for (const qi of selectedQuasiIdentifiers.reverse()) {
-        colKeys_qi.splice(colKeys_qi.indexOf(qi), 1);
-        colKeys_qi.unshift(qi);
-      }
-      const columnConfig_qi = colKeys_qi.map((key, i) => ({
-        fixed:
-          colKeys.length >= SCROLL_COLUMNS_THRESHOLD &&
-          i < selectedQuasiIdentifiers.length
-            ? "left"
-            : null,
-        width: 120,
-        ellipsis: true,
-        title:
-          i < selectedQuasiIdentifiers.length ? (
-            <strong style={{ color: "blue" }}>{key.toUpperCase()}</strong>
-          ) : (
-            key.toUpperCase()
+  const Step_ApplyTransformations: StepDefinition = {
+    title: "Apply Transformations",
+    content: () => {
+      // Derive columns spec from the data
+      let columnsConfig = [];
+
+      if (previewData.length) {
+        columnsConfig = fieldNames.map((key, i) => ({
+          fixed:
+            fieldNames.length >= SCROLL_COLUMNS_THRESHOLD && i === 0
+              ? "left"
+              : null,
+          width: 250,
+          ellipsis: true,
+          title: (
+            <div style={{ width: "100%" }}>
+              <strong>{key.toUpperCase()}</strong>
+              <br />
+              <TransformTypeSelector
+                value={selectedTransforms[key]}
+                onTransformTypeChange={value =>
+                  setSelectedTransforms({
+                    ...selectedTransforms,
+                    [key]: value
+                  })
+                }
+              />
+            </div>
           ),
-        dataIndex: key
-      }));
-      setRiskAnalysisReportColumnConfig(columnConfig_qi);
-      if (data.type === "COMPLETE") {
-        const chart = [];
-        chart.push({
-          id: "RecordLoss",
-          data: data.result.recordLoss
-        });
-        chart.push({
-          id: "EqClassLoss",
-          data: data.result.eqClassLoss
-        });
-        setRiskAnalysisChartData(chart);
-        setRiskAnalysisPercent(100);
+          dataIndex: key,
+          render: text =>
+            resolveTransform(selectedMode, selectedTransforms[key]).preview(
+              text
+            )
+        }));
       }
-    };
-  };
-
-  const onGenerateRiskReport = () => {
-    setRiskAnalysisPercent(0);
-    if (rawData.length > 0) {
-      // Data has already been loaded
-      generateRiskReport();
-    } else {
-      readFullFile(() => {
-        // Set as complete after DEBOUNCE so that it will not get skipped
-        setTimeout(() => setProcessFileReadPercent(100), DEBOUNCE_MS);
-        generateRiskReport();
-      });
-    }
-  };
-
-  const steps = [
-    {
-      index: 0,
-      title: "Upload CSV",
-      content: (
-        <FileUploader {...fileUploaderProps} progress={fileReadPercent} />
-      )
-    },
-    {
-      index: 1,
-      title: "Apply Transformations",
-      content: (
+      return (
         <Table
           dataSource={previewData}
           columns={columnsConfig}
@@ -339,103 +239,221 @@ const DAFAAAnonymizer = () => {
           scroll={{ x: 1000, y: 700 }}
           size="small"
         ></Table>
-      )
-    },
-    {
-      index: 2,
-      title: "Risk Analysis",
-      content: () => {
-        let riskPreviewData;
-        let riskPreviewDataLength;
+      );
+    }
+  };
 
-        if (riskAnalysisReportData && previewRiskRecordsK) {
-          const index = riskAnalysisReportData.kValues.indexOf(
-            previewRiskRecordsK
-          );
-          riskPreviewData = riskAnalysisReportData.samples[index];
-          if (riskPreviewData) {
-            riskPreviewData = riskPreviewData.map((o, i) => {
-              // add incrementing key to make react happy
-              o.key = i;
-              return o;
-            });
-            riskPreviewDataLength = riskPreviewData.length;
+  const Step_RiskAnalysis: StepDefinition = {
+    title: "Risk Analysis",
+    content: () => {
+      const generateRiskReport = () => {
+        // Push computation to web worker
+        riskAnalyzerWorker.postMessage({
+          rawData,
+          quasiIdentifiers: selectedQuasiIdentifiers
+        });
+        // Listen for completion and progress updates
+        riskAnalyzerWorker.onmessage = ({ data }) => {
+          setRiskAnalysisReportData(data.result);
+          const fieldNames_qi = [...fieldNames];
+          // Move selected QI columns to the start of table, and fix the columns
+          for (const qi of selectedQuasiIdentifiers.reverse()) {
+            fieldNames_qi.splice(fieldNames_qi.indexOf(qi), 1);
+            fieldNames_qi.unshift(qi);
           }
+          const columnConfig_qi = fieldNames_qi.map((key, i) => ({
+            fixed:
+              fieldNames.length >= SCROLL_COLUMNS_THRESHOLD &&
+              i < selectedQuasiIdentifiers.length
+                ? "left"
+                : null,
+            width: 120,
+            ellipsis: true,
+            title:
+              i < selectedQuasiIdentifiers.length ? (
+                <strong style={{ color: "blue" }}>{key.toUpperCase()}</strong>
+              ) : (
+                key.toUpperCase()
+              ),
+            dataIndex: key
+          }));
+          setRiskAnalysisReportColumnConfig(columnConfig_qi);
+          if (data.type === "COMPLETE") {
+            const chart = [];
+            chart.push({
+              id: "RecordLoss",
+              data: data.result.recordLoss
+            });
+            chart.push({
+              id: "EqClassLoss",
+              data: data.result.eqClassLoss
+            });
+            setRiskAnalysisChartData(chart);
+            setRiskAnalysisPercent(100);
+          }
+        };
+      };
+
+      const onGenerateRiskReport = () => {
+        setRiskAnalysisPercent(0);
+        if (rawData.length > 0) {
+          // Data has already been loaded
+          generateRiskReport();
+        } else {
+          readFullFile(() => {
+            // Set as complete after DEBOUNCE so that it will not get skipped
+            setTimeout(() => setProcessFileReadPercent(100), DEBOUNCE_MS);
+            generateRiskReport();
+          });
         }
-        return (
-          <Card>
-            <div style={{ display: "flex" }}>
-              <strong
-                style={{
-                  marginRight: 10,
-                  textAlign: "right",
-                  marginBottom: 10
-                }}
-              >
-                Quasi Identifiers
-              </strong>
-              <QISelector
-                colKeys={colKeys}
-                selectedQuasiIdentifiers={selectedQuasiIdentifiers}
-                setSelectedQuasiIdentifiers={setSelectedQuasiIdentifiers}
-              />
-              <Button
-                style={{ marginLeft: 10 }}
-                size="large"
-                type="primary"
-                onClick={onGenerateRiskReport}
-                loading={riskAnalysisPercent >= 0 && riskAnalysisPercent < 100}
-              >
-                Run Analysis
-              </Button>
-            </div>
-            {riskAnalysisChartData ? (
-              <div style={{ height: 300, marginBottom: 20 }}>
-                <Title level={4}>Risk vs Utility Tradeoff</Title>
-                <RiskAnalysisChart
-                  data={riskAnalysisChartData}
-                  setPreviewRiskRecordsK={setPreviewRiskRecordsK}
-                />
-              </div>
-            ) : null}
-            {riskAnalysisReportData && previewRiskRecordsK ? (
-              <div style={{ marginTop: 50 }}>
-                {riskPreviewDataLength ? (
-                  <Title
-                    level={4}
-                  >{`Preview records with k=${previewRiskRecordsK} (${(
-                    (1 / previewRiskRecordsK) *
-                    100
-                  ).toFixed(
-                    1
-                  )}% re-identification risk) [${riskPreviewDataLength}/${
-                    riskAnalysisReportData.totalRecords
-                  }]`}</Title>
-                ) : (
-                  <Title level={4}>
-                    Nothing to preview, no samples or too many unique samples
-                  </Title>
-                )}
-                <Table
-                  dataSource={riskPreviewData}
-                  columns={riskAnalysisReportColumnConfig}
-                  pagination={{ pageSize: 5 }}
-                  scroll={{ x: 1000, y: 300 }}
-                  size="small"
-                ></Table>
-              </div>
-            ) : null}
-          </Card>
+      };
+
+      let riskPreviewData;
+      let riskPreviewDataLength;
+
+      if (riskAnalysisReportData && previewRiskRecordsK) {
+        const index = riskAnalysisReportData.kValues.indexOf(
+          previewRiskRecordsK
         );
+        riskPreviewData = riskAnalysisReportData.samples[index];
+        if (riskPreviewData) {
+          riskPreviewData = riskPreviewData.map((o, i) => {
+            // add incrementing key to make react happy
+            o.key = i;
+            return o;
+          });
+          riskPreviewDataLength = riskPreviewData.length;
+        }
       }
-    },
-    {
-      index: 3,
-      title: "Anonymize",
-      content: (
+      return (
+        <Card>
+          <div style={{ display: "flex" }}>
+            <strong
+              style={{
+                marginRight: 10,
+                textAlign: "right",
+                marginBottom: 10
+              }}
+            >
+              Quasi Identifiers
+            </strong>
+            <QISelector
+              fieldNames={fieldNames}
+              selectedQuasiIdentifiers={selectedQuasiIdentifiers}
+              setSelectedQuasiIdentifiers={setSelectedQuasiIdentifiers}
+            />
+            <Button
+              style={{ marginLeft: 10 }}
+              size="large"
+              type="primary"
+              onClick={onGenerateRiskReport}
+              loading={riskAnalysisPercent >= 0 && riskAnalysisPercent < 100}
+            >
+              Run Analysis
+            </Button>
+          </div>
+          {riskAnalysisChartData ? (
+            <div style={{ height: 300, marginBottom: 20 }}>
+              <Title level={4}>Risk vs Utility Tradeoff</Title>
+              <RiskAnalysisChart
+                data={riskAnalysisChartData}
+                setPreviewRiskRecordsK={setPreviewRiskRecordsK}
+              />
+            </div>
+          ) : null}
+          {riskAnalysisReportData && previewRiskRecordsK ? (
+            <div style={{ marginTop: 50 }}>
+              {riskPreviewDataLength ? (
+                <Title
+                  level={4}
+                >{`Preview records with k=${previewRiskRecordsK} (${(
+                  (1 / previewRiskRecordsK) *
+                  100
+                ).toFixed(
+                  1
+                )}% re-identification risk) [${riskPreviewDataLength}/${
+                  riskAnalysisReportData.totalRecords
+                }]`}</Title>
+              ) : (
+                <Title level={4}>
+                  Nothing to preview, no samples or too many unique samples
+                </Title>
+              )}
+              <Table
+                dataSource={riskPreviewData}
+                columns={riskAnalysisReportColumnConfig}
+                pagination={{ pageSize: 5 }}
+                scroll={{ x: 1000, y: 300 }}
+                size="small"
+              ></Table>
+            </div>
+          ) : null}
+        </Card>
+      );
+    }
+  };
+
+  const Step_Download: StepDefinition = {
+    title: "Anonymize",
+    content: () => {
+      const download = data => {
+        // Trigger user download of csv file from Array<object>
+        const element = document.createElement("a");
+        const file = new Blob(
+          [
+            Papa.unparse(data, {
+              skipEmptyLines: true
+            })
+          ],
+          {
+            type: "text/csv"
+          }
+        );
+        element.href = URL.createObjectURL(file);
+        element.download = "anonymized.csv";
+        document.body.appendChild(element); // Required for this to work in FireFox
+        element.click();
+      };
+      const anonymizeAndDownload = () => {
+        setProcessFileTransformPercent(0);
+
+        // Push computation to web worker
+        anonymizerWorker.postMessage({
+          rawData,
+          selectedTransforms,
+          selectedMode
+        });
+        // Listen for completion and progress updates
+        anonymizerWorker.onmessage = ({ data }) => {
+          if (data.type === "UPDATE_PROGRESS") {
+            setProcessFileTransformPercent(data.progress);
+          } else if (data.type === "COMPLETE") {
+            console.log("Anonymizing complete");
+            download(data.result);
+            // Set as complete after DEBOUNCE so that it will not get skipped
+            setTimeout(() => setProcessFileTransformPercent(100), DEBOUNCE_MS);
+            setAnonymizeIsLoading(false);
+          }
+        };
+      };
+      const onAnonymizeDownload = () => {
+        setAnonymizeIsLoading(true);
+        if (rawData.length > 0) {
+          // Data has already been loaded
+          anonymizeAndDownload();
+        } else {
+          readFullFile(() => {
+            // Set as complete after DEBOUNCE so that it will not get skipped
+            setTimeout(() => setProcessFileReadPercent(100), DEBOUNCE_MS);
+            anonymizeAndDownload();
+          });
+        }
+      };
+
+      return (
         <Card>
           <TransformSummary
-            fields={colKeys}
+            fieldNames={fieldNames}
             selectedTransforms={selectedTransforms}
             selectedMode={selectedMode}
           />
@@ -482,9 +500,19 @@ const DAFAAAnonymizer = () => {
             ) : null}
           </div>
         </Card>
-      )
+      );
     }
-  ];
+  };
+
+  const STEPS: StepDefinition[] = [
+    Step_UploadCSV,
+    Step_ApplyTransformations,
+    Step_RiskAnalysis,
+    Step_Download
+  ].map((step, i) => {
+    step["index"] = i;
+    return step;
+  });
 
   const getStepStatus = (step, currentStep) => {
     if (step === currentStep) return "process";
@@ -519,7 +547,7 @@ const DAFAAAnonymizer = () => {
         <Button
           key="next"
           type="primary"
-          disabled={currentStep === steps.length - 1}
+          disabled={currentStep === STEPS.length - 1}
           onClick={() => setCurrentStep(currentStep + 1)}
         >
           Next
@@ -535,7 +563,7 @@ const DAFAAAnonymizer = () => {
           boxShadow: "0px -1px 0 0 #e8e8e8 inset"
         }}
       >
-        {steps.map(step => (
+        {STEPS.map(step => (
           <Step
             key={step.index}
             status={getStepStatus(step.index, currentStep)}
@@ -546,9 +574,7 @@ const DAFAAAnonymizer = () => {
           />
         ))}
       </Steps>
-      {steps[currentStep].content instanceof Function
-        ? (steps[currentStep].content as Function)()
-        : steps[currentStep].content}
+      {STEPS[currentStep].content()}
     </PageHeader>
   );
 };
