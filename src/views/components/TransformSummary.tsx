@@ -40,7 +40,7 @@ const TransformSummary = ({ selectedTransforms, selectedMode, fieldNames }) => {
       dataSource={data}
       columns={columns}
       pagination={false}
-      size="small"
+      size="middle"
     ></Table>
   );
 };

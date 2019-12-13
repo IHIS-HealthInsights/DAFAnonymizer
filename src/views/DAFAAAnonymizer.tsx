@@ -33,6 +33,8 @@ const { Title } = Typography;
 const DAFAAAnonymizer = () => {
   const DEBOUNCE_MS = 100;
   const SCROLL_COLUMNS_THRESHOLD = 5;
+  const COLUMN_WIDTH = 250;
+
   const [userFile, setUserFile] = useState();
   const [fileReadPercent, setFileReadPercent] = useDebounce(
     0,
@@ -200,15 +202,12 @@ const DAFAAAnonymizer = () => {
     content: () => {
       // Derive columns spec from the data
       let columnsConfig = [];
-
+      const isFixed = fieldNames.length >= SCROLL_COLUMNS_THRESHOLD;
       if (previewData.length) {
         columnsConfig = fieldNames.map((key, i) => ({
-          fixed:
-            fieldNames.length >= SCROLL_COLUMNS_THRESHOLD && i === 0
-              ? "left"
-              : null,
-          width: 250,
-          ellipsis: true,
+          fixed: isFixed && i === 0 ? "left" : null,
+          width: COLUMN_WIDTH,
+          ellipsis: false, // do word wrapping instead
           title: (
             <div style={{ width: "100%" }}>
               <strong>{key.toUpperCase()}</strong>
@@ -225,10 +224,17 @@ const DAFAAAnonymizer = () => {
             </div>
           ),
           dataIndex: key,
-          render: text =>
-            resolveTransform(selectedMode, selectedTransforms[key]).preview(
-              text
-            )
+          render: text => (
+            <div
+              style={{
+                width: COLUMN_WIDTH - 20
+              }}
+            >
+              {resolveTransform(selectedMode, selectedTransforms[key]).preview(
+                text
+              )}
+            </div>
+          )
         }));
       }
       return (
@@ -237,7 +243,7 @@ const DAFAAAnonymizer = () => {
           columns={columnsConfig}
           pagination={{ pageSize: 50 }}
           scroll={{ x: 1000, y: 700 }}
-          size="small"
+          size="middle"
         ></Table>
       );
     }
@@ -327,16 +333,12 @@ const DAFAAAnonymizer = () => {
       }
       return (
         <Card>
-          <div style={{ display: "flex" }}>
-            <strong
-              style={{
-                marginRight: 10,
-                textAlign: "right",
-                marginBottom: 10
-              }}
-            >
-              Quasi Identifiers
+          <div style={{ textAlign: "left" }}>
+            <strong>
+              Select Quasi Identifiers to analyze Re-idenfication Risk
             </strong>
+          </div>
+          <div style={{ display: "flex" }}>
             <QISelector
               fieldNames={fieldNames}
               selectedQuasiIdentifiers={selectedQuasiIdentifiers}
@@ -384,7 +386,7 @@ const DAFAAAnonymizer = () => {
                 columns={riskAnalysisReportColumnConfig}
                 pagination={{ pageSize: 5 }}
                 scroll={{ x: 1000, y: 300 }}
-                size="small"
+                size="middle"
               ></Table>
             </div>
           ) : null}
