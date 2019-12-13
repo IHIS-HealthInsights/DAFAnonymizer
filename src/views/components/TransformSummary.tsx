@@ -35,7 +35,14 @@ const TransformSummary = ({ selectedTransforms, selectedMode, fields }) => {
       transformType: resolveTransformStr(selectedMode, fieldOrTransformType)
     });
   }
-  return <Table dataSource={data} columns={columns} pagination={false}></Table>;
+  return (
+    <Table
+      dataSource={data}
+      columns={columns}
+      pagination={false}
+      size="small"
+    ></Table>
+  );
 };
 
 export default TransformSummary;

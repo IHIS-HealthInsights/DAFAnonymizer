@@ -337,6 +337,7 @@ const DAFAAAnonymizer = () => {
           columns={columnsConfig}
           pagination={{ pageSize: 50 }}
           scroll={{ x: 1000, y: 700 }}
+          size="small"
         ></Table>
       )
     },
@@ -420,6 +421,7 @@ const DAFAAAnonymizer = () => {
                   columns={riskAnalysisReportColumnConfig}
                   pagination={{ pageSize: 5 }}
                   scroll={{ x: 1000, y: 300 }}
+                  size="small"
                 ></Table>
               </div>
             ) : null}
