@@ -31,12 +31,12 @@ const riskAnalyzerWorker = new RiskAnalyzerWorker();
 const { Step } = Steps;
 const { Title } = Typography;
 
-let rawData = []; // This could potentially be large, do not store in React state
-
 const DAFAAAnonymizer = () => {
   const DEBOUNCE_MS = 100;
   const SCROLL_COLUMNS_THRESHOLD = 5;
   const COLUMN_WIDTH = 250;
+  const MAX_SIZE_FOR_PREVIEW_MB = 50;
+  const MAX_SIZE_FOR_PREVIEW = MAX_SIZE_FOR_PREVIEW_MB * 1024 * 1024; //MB
 
   const [userFile, setUserFile] = useState();
   const [fileReadPercent, setFileReadPercent] = useDebounce(
@@ -44,15 +44,11 @@ const DAFAAAnonymizer = () => {
     DEBOUNCE_MS,
     true
   );
-  const [processFileReadPercent, setProcessFileReadPercent] = useDebounce(
+  const [anonymizePercent, setAnonymizePercent] = useDebounce(
     0,
     DEBOUNCE_MS,
     true
   );
-  const [
-    processFileTransformPercent,
-    setProcessFileTransformPercent
-  ] = useDebounce(0, DEBOUNCE_MS, true);
   const [previewData, setPreviewData] = useState([]);
   const [selectedTransforms, setSelectedTransforms] = useState({});
   const [currentStep, setCurrentStep] = useState(0);
@@ -76,17 +72,16 @@ const DAFAAAnonymizer = () => {
   const [previewRiskRecordsK, setPreviewRiskRecordsK] = useState();
   const [fieldNames, setFieldNames] = useState([]);
   const [selectedKThreshold, setSelectedKThreshold] = useState(0);
+  const [previewEnabled, setPreviewEnabled] = useState(false);
 
   /**
    * Define shared functions between different views
    */
 
   const reset = () => {
-    rawData = [];
     setSelectedTransforms({});
     setSelectedQuasiIdentifiers([]);
-    setProcessFileReadPercent(0);
-    setProcessFileTransformPercent(0);
+    setAnonymizePercent(0);
     setRiskAnalysisPercent(0);
     setRiskAnalysisReportData(undefined);
     setRiskAnalysisChartData(undefined);
@@ -97,41 +92,7 @@ const DAFAAAnonymizer = () => {
     setSelectedKThreshold(0);
     setPreviewRiskRecordsK(undefined);
     setFieldNames([]);
-  };
-
-  const readFullFile = complete => {
-    Papa.parse(userFile, {
-      skipEmptyLines: true,
-      header: hasHeader,
-      worker: true,
-      chunk: ({ data, errors, meta }) => {
-        if (!data.length) {
-          alert("CSV file is empty");
-          return;
-        }
-        if (errors.length) {
-          console.error(errors);
-          alert("Failed to write CSV file");
-          return;
-        }
-        if (!hasHeader) {
-          // Convert 2d array into objects with generated header
-          const numCols = data[0].length;
-          data = data.map(row => {
-            const d = {};
-            for (let i = 0; i < numCols; i++) {
-              d[`Column${i + 1}`] = row[i];
-            }
-            return d;
-          });
-        }
-        setProcessFileReadPercent(
-          Math.round((meta.cursor / userFile.size) * 100)
-        );
-        rawData = rawData.concat(data);
-      },
-      complete: complete
-    });
+    setPreviewEnabled(false);
   };
 
   /**
@@ -157,6 +118,7 @@ const DAFAAAnonymizer = () => {
         // If `resolve` is not called, data will not be uploaded
         transformFile(file) {
           setUserFile(file);
+
           let previewData = [];
           let readRowsCount = 0;
 
@@ -186,7 +148,7 @@ const DAFAAAnonymizer = () => {
                     return d;
                   });
                 }
-                setProcessFileReadPercent(
+                setFileReadPercent(
                   Math.round((readRowsCount / previewCount) * 100)
                 );
                 previewData = previewData.concat(data);
@@ -196,6 +158,8 @@ const DAFAAAnonymizer = () => {
                 reset();
 
                 setFileReadPercent(100);
+                setPreviewEnabled(file.size <= MAX_SIZE_FOR_PREVIEW);
+
                 // Add incrementing key to each record for table display
                 previewData = previewData.map((d, i) => ({
                   ...d,
@@ -273,11 +237,14 @@ const DAFAAAnonymizer = () => {
   const Step_RiskAnalysis: StepDefinition = {
     title: "Risk Analysis",
     content: () => {
-      const generateRiskReport = () => {
+      const onGenerateRiskReport = () => {
+        setRiskAnalysisIsLoading(true);
         // Push computation to web worker
         riskAnalyzerWorker.postMessage({
-          rawData,
-          quasiIdentifiers: selectedQuasiIdentifiers
+          file: userFile,
+          hasHeader,
+          quasiIdentifiers: selectedQuasiIdentifiers,
+          previewEnabled
         });
         // Listen for completion and progress updates
         riskAnalyzerWorker.onmessage = ({ data }) => {
@@ -327,30 +294,18 @@ const DAFAAAnonymizer = () => {
         };
       };
 
-      const onGenerateRiskReport = () => {
-        setRiskAnalysisIsLoading(true);
-        if (rawData.length > 0) {
-          // Data has already been loaded
-          generateRiskReport();
-        } else {
-          readFullFile(() => {
-            // Set as complete after DEBOUNCE so that it will not get skipped
-            setTimeout(() => setProcessFileReadPercent(100), DEBOUNCE_MS);
-            generateRiskReport();
-          });
-        }
-      };
-
       // Setup for preview table of records
       let previewRiskData = [];
-      if (riskAnalysisReportData && previewRiskRecordsK) {
-        previewRiskData = riskAnalysisReportData.indexes[
-          previewRiskRecordsK
-        ].map(i => {
-          const record = rawData[i];
-          record["key"] = i; // to make react happy
-          return record;
-        });
+      if (previewEnabled) {
+        if (riskAnalysisReportData && previewRiskRecordsK) {
+          previewRiskData = riskAnalysisReportData.records[
+            previewRiskRecordsK
+          ].map((record, i) => {
+            const data = record.data;
+            data["key"] = i; // to make react happy
+            return data;
+          });
+        }
       }
 
       return (
@@ -385,15 +340,6 @@ const DAFAAAnonymizer = () => {
               size="small"
               style={{ width: "100%" }}
             >
-              <Descriptions.Item label="File Read Progress">
-                <Progress
-                  strokeColor={{
-                    from: "#108ee9",
-                    to: "#87d068"
-                  }}
-                  percent={processFileReadPercent}
-                />
-              </Descriptions.Item>
               <Descriptions.Item label="Analysis Progress">
                 <Progress
                   strokeColor={{
@@ -406,7 +352,7 @@ const DAFAAAnonymizer = () => {
             </Descriptions>
           ) : null}
           {riskAnalysisChartData ? (
-            <div style={{ height: 300, marginBottom: 20 }}>
+            <div style={{ height: 300, marginBottom: 70 }}>
               <Title level={4}>Risk vs Utility Tradeoff</Title>
               <RiskAnalysisChart
                 data={riskAnalysisChartData}
@@ -415,23 +361,29 @@ const DAFAAAnonymizer = () => {
             </div>
           ) : null}
           {riskAnalysisReportData && previewRiskRecordsK ? (
-            <div style={{ marginTop: 50 }}>
-              <Title
-                level={4}
-              >{`Preview records with k=${previewRiskRecordsK} (${(
-                (1 / previewRiskRecordsK) *
-                100
-              ).toFixed(1)}% re-identification risk) [${
-                previewRiskData.length
-              }/${rawData.length}]`}</Title>
-              <Table
-                dataSource={previewRiskData}
-                columns={riskAnalysisReportColumnConfig}
-                pagination={{ pageSize: 5 }}
-                scroll={{ x: 1000, y: 300 }}
-                size="middle"
-              ></Table>
-            </div>
+            previewEnabled ? (
+              <div>
+                <Title
+                  level={4}
+                >{`Preview records with k=${previewRiskRecordsK} (${(
+                  (1 / previewRiskRecordsK) *
+                  100
+                ).toFixed(1)}% re-identification risk) [${
+                  previewRiskData.length
+                }/${riskAnalysisReportData.totalRecordCount}]`}</Title>
+                <Table
+                  dataSource={previewRiskData}
+                  columns={riskAnalysisReportColumnConfig}
+                  pagination={{ pageSize: 5 }}
+                  scroll={{ x: 1000, y: 300 }}
+                  size="middle"
+                ></Table>
+              </div>
+            ) : (
+              <strong>
+                {`Preview has been disabled as file size is too large (${MAX_SIZE_FOR_PREVIEW_MB}MB)`}
+              </strong>
+            )
           ) : null}
         </Card>
       );
@@ -443,7 +395,7 @@ const DAFAAAnonymizer = () => {
     content: () => {
       const onAnonymizeDownload = () => {
         setAnonymizeIsLoading(true);
-        setProcessFileTransformPercent(0);
+        setAnonymizePercent(0);
 
         // Two levels of anonymization may be applied:
         // 1. Field level transformations
@@ -453,10 +405,10 @@ const DAFAAAnonymizer = () => {
         let dropIndexes = [];
         if (selectedKThreshold !== 0) {
           // 0 = no suppression
-          Object.keys(riskAnalysisReportData.indexes).forEach((k, i) => {
+          Object.keys(riskAnalysisReportData.records).forEach((k, i) => {
             if (parseInt(k) <= selectedKThreshold) {
               dropIndexes = dropIndexes.concat(
-                riskAnalysisReportData.indexes[k]
+                riskAnalysisReportData.records[k].map(record => record.index)
               );
             }
           });
@@ -480,12 +432,12 @@ const DAFAAAnonymizer = () => {
         // Listen for completion and progress updates
         anonymizerWorker.onmessage = ({ data }) => {
           if (data.type === "PROGRESS") {
-            setProcessFileTransformPercent(data.progress);
+            setAnonymizePercent(data.progress);
           } else if (data.type === "NEW_CHUNK") {
             writer.write(data.chunk);
           } else if (data.type === "COMPLETE") {
             // Set as complete after DEBOUNCE so that it will not get skipped
-            setTimeout(() => setProcessFileTransformPercent(100), DEBOUNCE_MS);
+            setTimeout(() => setAnonymizePercent(100), DEBOUNCE_MS);
             setAnonymizeIsLoading(false);
             writer.close();
           }
@@ -520,7 +472,6 @@ const DAFAAAnonymizer = () => {
                 size="large"
                 type="primary"
                 icon="download"
-                style={{ height: 75 }}
                 onClick={onAnonymizeDownload}
                 loading={anonymizeIsLoading}
                 disabled={!userFile}
@@ -528,31 +479,24 @@ const DAFAAAnonymizer = () => {
                 Anonymize and Download
               </Button>
             </div>
-            <Descriptions
-              column={1}
-              bordered
-              size="small"
-              style={{ width: "100%", marginLeft: 20 }}
-            >
-              <Descriptions.Item label="File Read Progress">
-                <Progress
-                  strokeColor={{
-                    from: "#108ee9",
-                    to: "#87d068"
-                  }}
-                  percent={processFileReadPercent}
-                />
-              </Descriptions.Item>
-              <Descriptions.Item label="Anonymization Progress">
-                <Progress
-                  strokeColor={{
-                    from: "#108ee9",
-                    to: "#87d068"
-                  }}
-                  percent={processFileTransformPercent}
-                />
-              </Descriptions.Item>
-            </Descriptions>
+            {anonymizePercent > 0 ? (
+              <Descriptions
+                column={1}
+                bordered
+                size="small"
+                style={{ width: "100%", marginLeft: 20 }}
+              >
+                <Descriptions.Item label="Anonymization Progress">
+                  <Progress
+                    strokeColor={{
+                      from: "#108ee9",
+                      to: "#87d068"
+                    }}
+                    percent={anonymizePercent}
+                  />
+                </Descriptions.Item>
+              </Descriptions>
+            ) : null}
           </div>
         </Card>
       );

@@ -16,7 +16,7 @@ const KThresholdSelector = ({
     // 0 = no suppression
     DEFAULT_KVALUES.forEach(k => {
       if (k <= value) {
-        dropCount += riskAnalysisReportData.indexes[k].length;
+        dropCount += riskAnalysisReportData.records[k].length;
       }
     });
   }

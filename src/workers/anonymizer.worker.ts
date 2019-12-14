@@ -51,11 +51,6 @@ ctx.onmessage = event => {
 
       data = anonymize(data, transforms, dropIndexes);
 
-      ctx.postMessage({
-        type: "PROGRESS",
-        progress: Math.round((meta.cursor / file.size) * 100)
-      });
-
       let lines = Papa.unparse(data, {
         skipEmptyLines: true,
         header: isFirstChunk
@@ -70,6 +65,11 @@ ctx.onmessage = event => {
       });
 
       isFirstChunk = false;
+
+      ctx.postMessage({
+        type: "PROGRESS",
+        progress: Math.round((meta.cursor / file.size) * 100)
+      });
     },
     complete: () => {
       ctx.postMessage({
@@ -99,5 +99,4 @@ function anonymize(
       }
       return anonymizedRecord;
     });
-
 }
