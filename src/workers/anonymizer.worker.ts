@@ -7,7 +7,7 @@ import "./custom.d";
 const ctx: Worker = self as any;
 
 ctx.onmessage = event => {
-  const { rawData, selectedTransforms, selectedMode } = event.data;
+  const { rawData, selectedTransforms, selectedMode, dropIndexes } = event.data;
   const anonymizedData = [];
   let processedCount = 0;
   let totalCount = rawData.length;
@@ -22,7 +22,9 @@ ctx.onmessage = event => {
     transforms[col] = resolveTransform(selectedMode, selectedTransforms[col]);
   }
 
-  for (const record of rawData) {
+  for (let i = 0; i < rawData.length; i++) {
+    if (dropIndexes.includes(i)) continue;
+    const record = rawData[i];
     if (processedCount % 10000 === 0) {
       ctx.postMessage({
         type: "UPDATE_PROGRESS",

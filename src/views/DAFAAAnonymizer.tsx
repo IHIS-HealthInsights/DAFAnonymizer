@@ -8,6 +8,7 @@ import RiskAnalyzerWorker from "worker-loader!../workers/riskAnalyzer.worker";
 
 import { resolveTransform } from "../anonymizer/Transforms";
 import FileUploader from "./components/FileUploader";
+import KThresholdSelector from "./components/KThresholdSelector";
 import QISelector from "./components/QISelector";
 import RiskAnalysisChart from "./components/RiskAnalysisChart";
 import TransformSummary from "./components/TransformSummary";
@@ -58,6 +59,7 @@ const DAFAAAnonymizer = () => {
   const [anonymizeIsLoading, setAnonymizeIsLoading] = useState(false);
   const [previewRiskRecordsK, setPreviewRiskRecordsK] = useState();
   const [fieldNames, setFieldNames] = useState([]);
+  const [selectedKThreshold, setSelectedKThreshold] = useState(0);
 
   /**
    * Define shared functions between different views
@@ -308,16 +310,13 @@ const DAFAAAnonymizer = () => {
       // Setup for preview table of records
       let previewRiskData = [];
       if (riskAnalysisReportData && previewRiskRecordsK) {
-        const kIndex = riskAnalysisReportData.kValues.indexOf(
+        previewRiskData = riskAnalysisReportData.indexes[
           previewRiskRecordsK
-        );
-        if (riskAnalysisReportData.indexes[kIndex]) {
-          previewRiskData = riskAnalysisReportData.indexes[kIndex].map(i => {
-            const record = rawData[i];
-            record["key"] = i; // to make react happy
-            return record;
-          });
-        }
+        ].map(i => {
+          const record = rawData[i];
+          record["key"] = i; // to make react happy
+          return record;
+        });
       }
 
       return (
@@ -361,7 +360,7 @@ const DAFAAAnonymizer = () => {
                 100
               ).toFixed(1)}% re-identification risk) [${
                 previewRiskData.length
-              }/${riskAnalysisReportData.totalRecords}]`}</Title>
+              }/${rawData.length}]`}</Title>
               <Table
                 dataSource={previewRiskData}
                 columns={riskAnalysisReportColumnConfig}
@@ -393,25 +392,42 @@ const DAFAAAnonymizer = () => {
           }
         );
         element.href = URL.createObjectURL(file);
-        element.download = "anonymized.csv";
+        element.download = `anonymized_${userFile.name}`;
         document.body.appendChild(element); // Required for this to work in FireFox
         element.click();
       };
       const anonymizeAndDownload = () => {
         setProcessFileTransformPercent(0);
 
+        // Two levels of anonymization may be applied:
+        // 1. Field level transformations
+        // 2. Record level suppression, based on k-anonymity risk analysis
+
+        // Figure out which records have greater risk than k threshold
+        let dropIndexes = [];
+        if (selectedKThreshold !== 0) {
+          // 0 = no suppression
+          Object.keys(riskAnalysisReportData.indexes).forEach((k, i) => {
+            if (parseInt(k) <= selectedKThreshold) {
+              dropIndexes = dropIndexes.concat(
+                riskAnalysisReportData.indexes[k]
+              );
+            }
+          });
+        }
+
         // Push computation to web worker
         anonymizerWorker.postMessage({
           rawData,
           selectedTransforms,
-          selectedMode
+          selectedMode,
+          dropIndexes
         });
         // Listen for completion and progress updates
         anonymizerWorker.onmessage = ({ data }) => {
           if (data.type === "UPDATE_PROGRESS") {
             setProcessFileTransformPercent(data.progress);
           } else if (data.type === "COMPLETE") {
-            console.log("Anonymizing complete");
             download(data.result);
             // Set as complete after DEBOUNCE so that it will not get skipped
             setTimeout(() => setProcessFileTransformPercent(100), DEBOUNCE_MS);
@@ -435,11 +451,25 @@ const DAFAAAnonymizer = () => {
 
       return (
         <Card>
+          <div style={{ textAlign: "left", fontWeight: "bold" }}>
+            1. Field-Level Transformations
+          </div>
           <TransformSummary
             fieldNames={fieldNames}
             selectedTransforms={selectedTransforms}
             selectedMode={selectedMode}
           />
+          <br />
+          <div style={{ textAlign: "left", fontWeight: "bold" }}>
+            2. Record-Level Suppression (using k-Anonymity)
+          </div>
+          <KThresholdSelector
+            onChange={setSelectedKThreshold}
+            value={selectedKThreshold}
+            riskAnalysisReportData={riskAnalysisReportData}
+            selectedQuasiIdentifiers={selectedQuasiIdentifiers}
+          />
+
           <br />
           <div style={{ display: "flex" }}>
             <div style={{ width: 260, textAlign: "left", paddingLeft: 0 }}>

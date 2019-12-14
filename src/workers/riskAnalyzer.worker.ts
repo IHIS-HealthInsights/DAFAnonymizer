@@ -1,3 +1,5 @@
+import { DEFAULT_KVALUES } from "../constants";
+
 // This is required for worker-loader - typescript integration
 import "./custom.d";
 
@@ -60,23 +62,6 @@ function nestedGroupby(data: object[], keys: string[]) {
   return groups;
 }
 
-const GRAPH_KVALUES = [
-  1,
-  2,
-  3,
-  4,
-  5,
-  6,
-  7,
-  8,
-  9,
-  10,
-  25,
-  50,
-  75,
-  100
-].reverse(); // reverse so that we can draw chart in order of increasing risk
-
 ctx.onmessage = event => {
   const { rawData, quasiIdentifiers } = event.data;
 
@@ -85,8 +70,9 @@ ctx.onmessage = event => {
 
   const recordLoss = [];
   const eqClassLoss = [];
-  const indexes: (number[] | null)[] = [];
-  GRAPH_KVALUES.forEach((k, i) => {
+  const indexes: Record<number, number[]> = {};
+  DEFAULT_KVALUES.forEach(k => {
+    indexes[k] = [];
     let recordCount = 0;
     let classCount = 0;
     for (const c of eqClasses) {
@@ -95,7 +81,7 @@ ctx.onmessage = event => {
         classCount += 1;
         // only add samples when exact match for k, so that we don't double count
         if (c.length === k) {
-          indexes[i] = indexes[i] ? indexes[i].concat(c) : c;
+          indexes[k] = indexes[k].concat(c);
         }
       }
     }
@@ -109,14 +95,16 @@ ctx.onmessage = event => {
     });
   });
 
+  // Reverse so that we can draw chart in order of increasing risk
+  recordLoss.reverse();
+  eqClassLoss.reverse();
+
   ctx.postMessage({
     type: "COMPLETE",
     result: {
       recordLoss,
       eqClassLoss,
-      indexes: indexes,
-      kValues: GRAPH_KVALUES,
-      totalRecords: rawData.length
+      indexes
     }
   });
 };

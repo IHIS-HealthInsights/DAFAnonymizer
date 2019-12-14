@@ -1,5 +1,5 @@
-import React from "react";
 import { ResponsiveLine } from "@nivo/line";
+import React from "react";
 
 const RiskAnalysisChart = ({ data, setPreviewRiskRecordsK }) => (
   <ResponsiveLine
@@ -60,7 +60,7 @@ const RiskAnalysisChart = ({ data, setPreviewRiskRecordsK }) => (
           <br />
           <strong>{`re-idenfication risk > ${((1 / k) * 100).toFixed(
             1
-          )}% (k=${k})`}</strong>
+          )}% (k≤${k})`}</strong>
           <br />
           <span>{` will result in `}</span>
           <br />
