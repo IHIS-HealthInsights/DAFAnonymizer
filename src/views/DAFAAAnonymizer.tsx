@@ -65,6 +65,23 @@ const DAFAAAnonymizer = () => {
    * Define shared functions between different views
    */
 
+  const reset = () => {
+    rawData = [];
+    setSelectedTransforms({});
+    setSelectedQuasiIdentifiers([]);
+    setProcessFileReadPercent(0);
+    setProcessFileTransformPercent(0);
+    setRiskAnalysisPercent(100);
+    setRiskAnalysisReportData(undefined);
+    setRiskAnalysisChartData(undefined);
+    setRiskAnalysisReportColumnConfig(undefined);
+    setAnonymizeIsLoading(false);
+    setPreviewRiskRecordsK(undefined);
+    setSelectedKThreshold(0);
+    setPreviewRiskRecordsK(undefined);
+    setFieldNames([]);
+  };
+
   const readFullFile = complete => {
     Papa.parse(userFile, {
       skipEmptyLines: true,
@@ -159,13 +176,7 @@ const DAFAAAnonymizer = () => {
               },
               complete: () => {
                 // Reset in case there was a previous upload
-                setSelectedTransforms({});
-                rawData = [];
-                setSelectedQuasiIdentifiers([]);
-                setRiskAnalysisReportData(undefined);
-                setRiskAnalysisChartData(undefined);
-                setPreviewRiskRecordsK(undefined);
-                setSelectedKThreshold(0);
+                reset();
 
                 setFileReadPercent(100);
                 // Add incrementing key to each record for table display
