@@ -49,7 +49,11 @@ const DAFAAAnonymizer = () => {
   const [hasHeader, setHasHeader] = useState(true);
   const [selectedMode, setSelectedMode] = useState("modeB");
   const [selectedQuasiIdentifiers, setSelectedQuasiIdentifiers] = useState([]);
-  const [riskAnalysisPercent, setRiskAnalysisPercent] = useState(100);
+  const [riskAnalysisPercent, setRiskAnalysisPercent] = useDebounce(
+    0,
+    DEBOUNCE_MS,
+    true
+  );
   const [riskAnalysisReportData, setRiskAnalysisReportData] = useState();
   const [
     riskAnalysisReportColumnConfig,
@@ -57,6 +61,7 @@ const DAFAAAnonymizer = () => {
   ] = useState();
   const [riskAnalysisChartData, setRiskAnalysisChartData] = useState();
   const [anonymizeIsLoading, setAnonymizeIsLoading] = useState(false);
+  const [riskAnalysisIsLoading, setRiskAnalysisIsLoading] = useState(false);
   const [previewRiskRecordsK, setPreviewRiskRecordsK] = useState();
   const [fieldNames, setFieldNames] = useState([]);
   const [selectedKThreshold, setSelectedKThreshold] = useState(0);
@@ -71,11 +76,12 @@ const DAFAAAnonymizer = () => {
     setSelectedQuasiIdentifiers([]);
     setProcessFileReadPercent(0);
     setProcessFileTransformPercent(0);
-    setRiskAnalysisPercent(100);
+    setRiskAnalysisPercent(0);
     setRiskAnalysisReportData(undefined);
     setRiskAnalysisChartData(undefined);
     setRiskAnalysisReportColumnConfig(undefined);
     setAnonymizeIsLoading(false);
+    setRiskAnalysisIsLoading(false);
     setPreviewRiskRecordsK(undefined);
     setSelectedKThreshold(0);
     setPreviewRiskRecordsK(undefined);
@@ -264,7 +270,9 @@ const DAFAAAnonymizer = () => {
         });
         // Listen for completion and progress updates
         riskAnalyzerWorker.onmessage = ({ data }) => {
-          if (data.type === "COMPLETE") {
+          if (data.type === "PROGRESS") {
+            setRiskAnalysisPercent(data.progress);
+          } else if (data.type === "COMPLETE") {
             setRiskAnalysisReportData(data.result);
             const fieldNames_qi = [...fieldNames];
             // Move selected QI columns to the start of table, and fix the columns
@@ -299,14 +307,17 @@ const DAFAAAnonymizer = () => {
               id: "EqClassLoss",
               data: data.result.eqClassLoss
             });
-            setRiskAnalysisChartData(chart);
-            setRiskAnalysisPercent(100);
+            setTimeout(() => setRiskAnalysisPercent(100), DEBOUNCE_MS);
+            setTimeout(() => {
+              setRiskAnalysisChartData(chart);
+              setRiskAnalysisIsLoading(false);
+            }, 500); // wait for awhile, so that user can see full progress bar
           }
         };
       };
 
       const onGenerateRiskReport = () => {
-        setRiskAnalysisPercent(0);
+        setRiskAnalysisIsLoading(true);
         if (rawData.length > 0) {
           // Data has already been loaded
           generateRiskReport();
@@ -349,14 +360,42 @@ const DAFAAAnonymizer = () => {
               size="large"
               type="primary"
               onClick={onGenerateRiskReport}
-              loading={riskAnalysisPercent >= 0 && riskAnalysisPercent < 100}
+              loading={riskAnalysisIsLoading}
               disabled={selectedQuasiIdentifiers.length === 0}
             >
               Run Analysis
             </Button>
           </div>
+          <br />
+          {riskAnalysisIsLoading ? (
+            <Descriptions
+              column={1}
+              bordered
+              size="small"
+              style={{ width: "100%" }}
+            >
+              <Descriptions.Item label="File Read Progress">
+                <Progress
+                  strokeColor={{
+                    from: "#108ee9",
+                    to: "#87d068"
+                  }}
+                  percent={processFileReadPercent}
+                />
+              </Descriptions.Item>
+              <Descriptions.Item label="Analysis Progress">
+                <Progress
+                  strokeColor={{
+                    from: "#108ee9",
+                    to: "#87d068"
+                  }}
+                  percent={riskAnalysisPercent}
+                ></Progress>
+              </Descriptions.Item>
+            </Descriptions>
+          ) : null}
           {riskAnalysisChartData ? (
-            <div style={{ height: 300, marginBottom: 20, marginTop: 20 }}>
+            <div style={{ height: 300, marginBottom: 20 }}>
               <Title level={4}>Risk vs Utility Tradeoff</Title>
               <RiskAnalysisChart
                 data={riskAnalysisChartData}

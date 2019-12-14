@@ -25,7 +25,7 @@ function extractEqClasses(o: object, eqClasses: number[][]) {
   }
 }
 
-function nestedGroupby(data: object[], keys: string[]) {
+function nestedGroupby(data: object[], keys: string[], updateProgress) {
   /**
    * Takes in a list of objects, form nested groups using
    * a list of key values.
@@ -34,8 +34,12 @@ function nestedGroupby(data: object[], keys: string[]) {
    */
 
   const groups = {};
-  for (let row_index = 0; row_index < data.length; row_index++) {
-    const row = data[row_index];
+  for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
+    if (rowIndex % 10000 === 0) {
+      updateProgress((rowIndex / data.length) * 100);
+    }
+
+    const row = data[rowIndex];
     let curPointer = groups;
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i];
@@ -56,7 +60,7 @@ function nestedGroupby(data: object[], keys: string[]) {
 
     // Push indexes to save space, lookup later from data array
     if (isLeaf(curPointer)) {
-      curPointer.push(row_index);
+      curPointer.push(rowIndex);
     }
   }
   return groups;
@@ -65,13 +69,31 @@ function nestedGroupby(data: object[], keys: string[]) {
 ctx.onmessage = event => {
   const { rawData, quasiIdentifiers } = event.data;
 
+  const nestedGroupby_weightage = 50;
+  const countingWeightage = 50;
+
   const eqClasses = [];
-  extractEqClasses(nestedGroupby(rawData, quasiIdentifiers), eqClasses);
+  extractEqClasses(
+    nestedGroupby(rawData, quasiIdentifiers, progressPercent => {
+      ctx.postMessage({
+        type: "PROGRESS",
+        progress: Math.floor((nestedGroupby_weightage / 100) * progressPercent)
+      });
+    }),
+    eqClasses
+  );
 
   const recordLoss = [];
   const eqClassLoss = [];
   const indexes: Record<number, number[]> = {};
-  DEFAULT_KVALUES.forEach(k => {
+  DEFAULT_KVALUES.forEach((k, i) => {
+    ctx.postMessage({
+      type: "PROGRESS",
+      progress:
+        Math.floor(nestedGroupby_weightage +
+        (countingWeightage / DEFAULT_KVALUES.length) * i)
+    });
+
     indexes[k] = [];
     let recordCount = 0;
     let classCount = 0;
