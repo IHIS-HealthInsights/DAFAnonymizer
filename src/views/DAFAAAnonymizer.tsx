@@ -1,5 +1,15 @@
 import { useDebounce } from "@react-hook/debounce";
-import { Button, Card, Descriptions, PageHeader, Progress, Radio, Steps, Table, Typography } from "antd";
+import {
+  Button,
+  Card,
+  Descriptions,
+  PageHeader,
+  Progress,
+  Radio,
+  Steps,
+  Table,
+  Typography
+} from "antd";
 import Papa from "papaparse";
 import React, { useState } from "react";
 /* eslint import/no-webpack-loader-syntax: off */
@@ -13,6 +23,7 @@ import QISelector from "./components/QISelector";
 import RiskAnalysisChart from "./components/RiskAnalysisChart";
 import TransformSummary from "./components/TransformSummary";
 import TransformTypeSelector from "./components/TransformTypeSelector";
+import streamSaver from "streamsaver";
 
 const anonymizerWorker = new AnonymizerWorker();
 const riskAnalyzerWorker = new RiskAnalyzerWorker();
@@ -430,25 +441,8 @@ const DAFAAAnonymizer = () => {
   const Step_Download: StepDefinition = {
     title: "Anonymize",
     content: () => {
-      const download = data => {
-        // Trigger user download of csv file from Array<object>
-        const element = document.createElement("a");
-        const file = new Blob(
-          [
-            Papa.unparse(data, {
-              skipEmptyLines: true
-            })
-          ],
-          {
-            type: "text/csv"
-          }
-        );
-        element.href = URL.createObjectURL(file);
-        element.download = `anonymized_${userFile.name}`;
-        document.body.appendChild(element); // Required for this to work in FireFox
-        element.click();
-      };
-      const anonymizeAndDownload = () => {
+      const onAnonymizeDownload = () => {
+        setAnonymizeIsLoading(true);
         setProcessFileTransformPercent(0);
 
         // Two levels of anonymization may be applied:
@@ -470,35 +464,32 @@ const DAFAAAnonymizer = () => {
 
         // Push computation to web worker
         anonymizerWorker.postMessage({
-          rawData,
+          file: userFile,
+          hasHeader,
           selectedTransforms,
           selectedMode,
           dropIndexes
         });
+
+        // Download directly to file in chunks, never storing entire file in memory
+        const downloadStream = streamSaver.createWriteStream(
+          `anonymized_${userFile.name}`
+        );
+        const writer = downloadStream.getWriter();
+
         // Listen for completion and progress updates
         anonymizerWorker.onmessage = ({ data }) => {
-          if (data.type === "UPDATE_PROGRESS") {
+          if (data.type === "PROGRESS") {
             setProcessFileTransformPercent(data.progress);
+          } else if (data.type === "NEW_CHUNK") {
+            writer.write(data.chunk);
           } else if (data.type === "COMPLETE") {
-            download(data.result);
             // Set as complete after DEBOUNCE so that it will not get skipped
             setTimeout(() => setProcessFileTransformPercent(100), DEBOUNCE_MS);
             setAnonymizeIsLoading(false);
+            writer.close();
           }
         };
-      };
-      const onAnonymizeDownload = () => {
-        setAnonymizeIsLoading(true);
-        if (rawData.length > 0) {
-          // Data has already been loaded
-          anonymizeAndDownload();
-        } else {
-          readFullFile(() => {
-            // Set as complete after DEBOUNCE so that it will not get skipped
-            setTimeout(() => setProcessFileReadPercent(100), DEBOUNCE_MS);
-            anonymizeAndDownload();
-          });
-        }
       };
 
       return (
@@ -532,7 +523,7 @@ const DAFAAAnonymizer = () => {
                 style={{ height: 75 }}
                 onClick={onAnonymizeDownload}
                 loading={anonymizeIsLoading}
-                disabled={rawData.length === 0}
+                disabled={!userFile}
               >
                 Anonymize and Download
               </Button>

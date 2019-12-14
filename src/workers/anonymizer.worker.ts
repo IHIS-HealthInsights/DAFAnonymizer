@@ -1,49 +1,103 @@
-import Transforms, { resolveTransform } from "../anonymizer/Transforms";
-import { FIELD_TYPES, TRANSFORM_TYPES } from "../anonymizer/Types";
+import { resolveTransform } from "../anonymizer/Transforms";
+import Papa from "papaparse";
 
 // This is required for worker-loader - typescript integration
 import "./custom.d";
 
 const ctx: Worker = self as any;
+const encode = TextEncoder.prototype.encode.bind(new TextEncoder());
 
 ctx.onmessage = event => {
-  const { rawData, selectedTransforms, selectedMode, dropIndexes } = event.data;
-  const anonymizedData = [];
-  let processedCount = 0;
-  let totalCount = rawData.length;
+  const {
+    file,
+    hasHeader,
+    selectedTransforms,
+    selectedMode,
+    dropIndexes
+  } = event.data;
 
-  if (!rawData.length) {
-    return;
-  }
+  let isFirstChunk = true;
+  let transforms = {};
 
-  // Resolve transformations to be applied once, assume that every record has the same keys
-  const transforms = {};
-  for (const col in rawData[0]) {
-    transforms[col] = resolveTransform(selectedMode, selectedTransforms[col]);
-  }
+  Papa.parse(file, {
+    skipEmptyLines: true,
+    header: hasHeader,
+    chunk: ({ data, errors, meta }) => {
+      if (!data.length || errors.length) {
+        console.error(errors);
+        return;
+      }
+      if (!hasHeader) {
+        // Convert 2d array into objects with generated header
+        const numCols = data[0].length;
+        data = data.map(row => {
+          const d = {};
+          for (let i = 0; i < numCols; i++) {
+            d[`Column${i + 1}`] = row[i];
+          }
+          return d;
+        });
+      }
 
-  for (let i = 0; i < rawData.length; i++) {
-    if (dropIndexes.includes(i)) continue;
-    const record = rawData[i];
-    if (processedCount % 10000 === 0) {
+      // Resolve transformations to be applied once, assume that every record has the same keys
+      if (isFirstChunk) {
+        for (const col in data[0]) {
+          transforms[col] = resolveTransform(
+            selectedMode,
+            selectedTransforms[col]
+          );
+        }
+      }
+
+      data = anonymize(data, transforms, dropIndexes);
+
       ctx.postMessage({
-        type: "UPDATE_PROGRESS",
-        progress: Math.floor((processedCount / totalCount) * 100)
+        type: "PROGRESS",
+        progress: Math.round((meta.cursor / file.size) * 100)
+      });
+
+      let lines = Papa.unparse(data, {
+        skipEmptyLines: true,
+        header: isFirstChunk
+      });
+      if (!lines.endsWith("\n")) {
+        lines += "\n";
+      }
+
+      ctx.postMessage({
+        type: "NEW_CHUNK",
+        chunk: encode(lines)
+      });
+
+      isFirstChunk = false;
+    },
+    complete: () => {
+      ctx.postMessage({
+        type: "COMPLETE"
       });
     }
-    const anonymizedRecord = {};
-    for (const col in record) {
-      const output = transforms[col].process(record[col]);
-      if (output !== null) {
-        // null means that the column will be dropped
-        anonymizedRecord[col] = output;
-      }
-    }
-    anonymizedData.push(anonymizedRecord);
-    processedCount++;
-  }
-  ctx.postMessage({
-    type: "COMPLETE",
-    result: anonymizedData
   });
 };
+
+function anonymize(
+  data: Record<string, any>[],
+  transforms,
+  dropIndexes
+): Record<string, any>[] {
+  return data
+    .filter((_, i) => {
+      return !dropIndexes.includes(i);
+    })
+    .map(record => {
+      const anonymizedRecord = {};
+      for (const col in record) {
+        const output = transforms[col].process(record[col]);
+        if (output !== null) {
+          // null means that the column will be dropped
+          anonymizedRecord[col] = output;
+        }
+      }
+      return anonymizedRecord;
+    });
+
+}
