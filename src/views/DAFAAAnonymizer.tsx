@@ -165,6 +165,7 @@ const DAFAAAnonymizer = () => {
                 setRiskAnalysisReportData(undefined);
                 setRiskAnalysisChartData(undefined);
                 setPreviewRiskRecordsK(undefined);
+                setSelectedKThreshold(0);
 
                 setFileReadPercent(100);
                 // Add incrementing key to each record for table display
@@ -338,6 +339,7 @@ const DAFAAAnonymizer = () => {
               type="primary"
               onClick={onGenerateRiskReport}
               loading={riskAnalysisPercent >= 0 && riskAnalysisPercent < 100}
+              disabled={selectedQuasiIdentifiers.length === 0}
             >
               Run Analysis
             </Button>
@@ -480,37 +482,36 @@ const DAFAAAnonymizer = () => {
                 style={{ height: 75 }}
                 onClick={onAnonymizeDownload}
                 loading={anonymizeIsLoading}
+                disabled={rawData.length === 0}
               >
                 Anonymize and Download
               </Button>
             </div>
-            {processFileReadPercent > 0 ? (
-              <Descriptions
-                column={1}
-                bordered
-                size="small"
-                style={{ width: "100%", marginLeft: 20 }}
-              >
-                <Descriptions.Item label="File Read Progress">
-                  <Progress
-                    strokeColor={{
-                      from: "#108ee9",
-                      to: "#87d068"
-                    }}
-                    percent={processFileReadPercent}
-                  />
-                </Descriptions.Item>
-                <Descriptions.Item label="Anonymization Progress">
-                  <Progress
-                    strokeColor={{
-                      from: "#108ee9",
-                      to: "#87d068"
-                    }}
-                    percent={processFileTransformPercent}
-                  />
-                </Descriptions.Item>
-              </Descriptions>
-            ) : null}
+            <Descriptions
+              column={1}
+              bordered
+              size="small"
+              style={{ width: "100%", marginLeft: 20 }}
+            >
+              <Descriptions.Item label="File Read Progress">
+                <Progress
+                  strokeColor={{
+                    from: "#108ee9",
+                    to: "#87d068"
+                  }}
+                  percent={processFileReadPercent}
+                />
+              </Descriptions.Item>
+              <Descriptions.Item label="Anonymization Progress">
+                <Progress
+                  strokeColor={{
+                    from: "#108ee9",
+                    to: "#87d068"
+                  }}
+                  percent={processFileTransformPercent}
+                />
+              </Descriptions.Item>
+            </Descriptions>
           </div>
         </Card>
       );
