@@ -37,6 +37,7 @@ const DAFAAAnonymizer = () => {
   const COLUMN_WIDTH = 250;
   const MAX_SIZE_FOR_PREVIEW_MB = 50;
   const MAX_SIZE_FOR_PREVIEW = MAX_SIZE_FOR_PREVIEW_MB * 1024 * 1024; //MB
+  const MAX_PREVIEW_COUNT = 50;
 
   const [userFile, setUserFile] = useState();
   const [fileReadPercent, setFileReadPercent] = useDebounce(
@@ -244,7 +245,8 @@ const DAFAAAnonymizer = () => {
           file: userFile,
           hasHeader,
           quasiIdentifiers: selectedQuasiIdentifiers,
-          previewEnabled
+          previewEnabled,
+          maxPreviewCount: MAX_PREVIEW_COUNT
         });
         // Listen for completion and progress updates
         riskAnalyzerWorker.onmessage = ({ data }) => {
@@ -296,15 +298,18 @@ const DAFAAAnonymizer = () => {
 
       // Setup for preview table of records
       let previewRiskData = [];
+      let previewRiskRecordCount = 0;
       if (previewEnabled) {
         if (riskAnalysisReportData && previewRiskRecordsK) {
-          previewRiskData = riskAnalysisReportData.records[
-            previewRiskRecordsK
-          ].map((record, i) => {
-            const data = record.data;
-            data["key"] = i; // to make react happy
-            return data;
-          });
+          previewRiskRecordCount =
+            riskAnalysisReportData.records[previewRiskRecordsK].length;
+          previewRiskData = riskAnalysisReportData.records[previewRiskRecordsK]
+            .filter(record => !!record.data) // filter out records without preview data, only store up to some amount
+            .map((record, i) => {
+              const data = record.data;
+              data["key"] = i; // to make react happy
+              return data;
+            });
         }
       }
 
@@ -368,9 +373,11 @@ const DAFAAAnonymizer = () => {
                 >{`Preview records with k=${previewRiskRecordsK} (${(
                   (1 / previewRiskRecordsK) *
                   100
-                ).toFixed(1)}% re-identification risk) [${
-                  previewRiskData.length
-                }/${riskAnalysisReportData.totalRecordCount}]`}</Title>
+                ).toFixed(
+                  1
+                )}% re-identification risk) [${previewRiskRecordCount}/${
+                  riskAnalysisReportData.totalRecordCount
+                }]`}</Title>
                 <Table
                   dataSource={previewRiskData}
                   columns={riskAnalysisReportColumnConfig}

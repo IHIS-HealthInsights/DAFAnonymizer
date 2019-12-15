@@ -5,7 +5,6 @@ import Papa from "papaparse";
 import "./custom.d";
 
 const ctx: Worker = self as any;
-const MAX_PREVIEW_COUNT = 50;
 
 function isLeaf(arg: any): arg is any[] | number {
   return arg.length !== undefined || typeof arg === "number";
@@ -26,7 +25,13 @@ function extractEqClasses(o: object, eqClasses: (object[] | number)[]) {
 }
 
 ctx.onmessage = event => {
-  const { file, hasHeader, quasiIdentifiers, previewEnabled } = event.data;
+  const {
+    file,
+    hasHeader,
+    quasiIdentifiers,
+    previewEnabled,
+    maxPreviewCount
+  } = event.data;
 
   const groups = {};
   let curCount = 0;
@@ -112,18 +117,24 @@ ctx.onmessage = event => {
       const recordLoss = [];
       const eqClassLoss = [];
       const records: Record<number, Record<string, any>> = {};
-      const indexes: Record<number, number> = {};
       DEFAULT_KVALUES.forEach(k => {
         records[k] = [];
         let recordCount = 0;
         let classCount = 0;
-        for (const c of eqClasses) {
+        for (let c of eqClasses) {
           const length = typeof c === "number" ? c : c.length;
           if (length <= k) {
             recordCount += length;
             classCount += 1;
             // only add samples when exact match for k, so that we don't double count
+            // only store up to maxPreviewCount samples, delete data field afterwards
             if (length === k) {
+              if (records[k].length > maxPreviewCount) {
+                c = c.map(record => {
+                  record.data = null;
+                  return record;
+                });
+              }
               records[k] = records[k].concat(c);
             }
           }
