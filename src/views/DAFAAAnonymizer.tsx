@@ -183,8 +183,8 @@ const DAFAAAnonymizer = () => {
     }
   };
 
-  const Step_ApplyTransformations: StepDefinition = {
-    title: "Apply Transformations",
+  const Step_TagFields: StepDefinition = {
+    title: "Tag Fields",
     content: () => {
       // Derive columns spec from the data
       let columnsConfig = [];
@@ -512,7 +512,7 @@ const DAFAAAnonymizer = () => {
 
   const STEPS: StepDefinition[] = [
     Step_UploadCSV,
-    Step_ApplyTransformations,
+    Step_TagFields,
     Step_RiskAnalysis,
     Step_Download
   ].map((step, i) => {
