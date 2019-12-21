@@ -17,7 +17,9 @@ const Transforms: Record<string, ITransform> = {
   [TRANSFORM_TYPES.NONE]: {
     preview: function(text) {
       // Match and highlight sensitive values
-      const matches = new Matchers.NricMatcher().match(text);
+      const matches = new Matchers.NricMatcher()
+        .match(text)
+        .concat(new Matchers.SHIMatcher().match(text));
 
       if (!matches.length) return text;
       const output = [];

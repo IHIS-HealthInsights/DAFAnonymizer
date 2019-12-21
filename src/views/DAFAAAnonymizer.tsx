@@ -356,9 +356,33 @@ const DAFAAAnonymizer = () => {
               </Descriptions.Item>
             </Descriptions>
           ) : null}
+          {!riskAnalysisIsLoading &&
+          riskAnalysisReportData &&
+          riskAnalysisReportData.matchCounts ? (
+            <div style={{ textAlign: "left", marginBottom: 20 }}>
+              <Title level={4}>1. Full text scan results</Title>
+              <Descriptions bordered size="small" column={1}>
+                {Object.keys(riskAnalysisReportData.matchCounts).map(
+                  matchType => (
+                    <Descriptions.Item label={matchType} key={matchType}>
+                      {Object.keys(
+                        riskAnalysisReportData.matchCounts[matchType]
+                      ).map(field => (
+                        <div key={field}>
+                          <code>{`${field}: ${riskAnalysisReportData.matchCounts[matchType][field]} matches`}</code>
+                        </div>
+                      ))}
+                    </Descriptions.Item>
+                  )
+                )}
+              </Descriptions>
+            </div>
+          ) : null}
           {riskAnalysisChartData ? (
             <div style={{ height: 300, marginBottom: 70 }}>
-              <Title level={4}>Risk vs Utility Tradeoff</Title>
+              <Title level={4} style={{ textAlign: "left" }}>
+                2. Risk vs Utility Tradeoff (using k-Anonymity)
+              </Title>
               <RiskAnalysisChart
                 data={riskAnalysisChartData}
                 setPreviewRiskRecordsK={setPreviewRiskRecordsK}
@@ -370,7 +394,8 @@ const DAFAAAnonymizer = () => {
               <div>
                 <Title
                   level={4}
-                >{`Preview records with k=${previewRiskRecordsK} (${(
+                  style={{ textAlign: "left" }}
+                >{`3. Preview records with k=${previewRiskRecordsK} (${(
                   (1 / previewRiskRecordsK) *
                   100
                 ).toFixed(
@@ -453,18 +478,18 @@ const DAFAAAnonymizer = () => {
 
       return (
         <Card>
-          <div style={{ textAlign: "left", fontWeight: "bold" }}>
+          <Title level={4} style={{ textAlign: "left" }}>
             1. Field-Level Transformations
-          </div>
+          </Title>
           <TransformSummary
             fieldNames={fieldNames}
             selectedTransforms={selectedTransforms}
             selectedMode={selectedMode}
           />
           <br />
-          <div style={{ textAlign: "left", fontWeight: "bold" }}>
+          <Title level={4} style={{ textAlign: "left" }}>
             2. Record-Level Suppression (using k-Anonymity)
-          </div>
+          </Title>
           <KThresholdSelector
             onChange={setSelectedKThreshold}
             value={selectedKThreshold}

@@ -3,6 +3,7 @@ import Papa from "papaparse";
 
 // This is required for worker-loader - typescript integration
 import "./custom.d";
+import { NricMatcher, SHIMatcher, Matcher } from "src/anonymizer/Matchers";
 
 const ctx: Worker = self as any;
 
@@ -35,6 +36,7 @@ ctx.onmessage = event => {
 
   const groups = {};
   let curCount = 0;
+  let matchCounts = {};
 
   Papa.parse(file, {
     skipEmptyLines: true,
@@ -56,11 +58,31 @@ ctx.onmessage = event => {
         });
       }
 
-      // Sort into bucket based on quasi identifier values
       for (let chunkIndex = 0; chunkIndex < data.length; chunkIndex++) {
         const rowIndex = curCount + chunkIndex;
         const row = data[chunkIndex];
 
+        // 1. Scan for PII and SHI
+        const matchers: Matcher[] = [new NricMatcher(), new SHIMatcher()];
+        for (let key in row) {
+          const text = row[key];
+          for (const matcher of matchers) {
+            const count = matcher.match(text).length;
+            if (count > 0) {
+              if (matchCounts[matcher.description]) {
+                if (matchCounts[matcher.description][key]) {
+                  matchCounts[matcher.description][key] += count;
+                } else {
+                  matchCounts[matcher.description][key] = count;
+                }
+              } else {
+                matchCounts[matcher.description] = { [key]: count };
+              }
+            }
+          }
+        }
+
+        // 2. Sort into bucket based on quasi identifier values
         let curPointer = groups;
         let prevPointer;
         let key;
@@ -156,6 +178,7 @@ ctx.onmessage = event => {
       ctx.postMessage({
         type: "COMPLETE",
         result: {
+          matchCounts,
           recordLoss,
           eqClassLoss,
           records,
