@@ -76,12 +76,20 @@ const Transforms: Record<string, ITransform> = {
       return null;
     }
   },
-  [TRANSFORM_TYPES.SUPPRESS]: {
+  [TRANSFORM_TYPES.TRUNCATE_LAST_3]: {
+    // TODO: Make this implementation generic to accept truncate length
     preview: function(text) {
-      return <span>Add Random Noise</span>;
+      return (
+        <div>
+          <span>{text.substring(0, text.length - 3)}</span>{" "}
+          <span style={{ textDecoration: "line-through", color: "grey" }}>
+            {text.substring(text.length - 3, text.length)}
+          </span>
+        </div>
+      );
     },
-    process: function() {
-      return null;
+    process: function(text) {
+      return text.substring(0, text.length - 3);
     }
   }
 };

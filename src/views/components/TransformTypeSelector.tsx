@@ -7,7 +7,7 @@ const TransformTypeSelector = props => {
   return (
     <Select
       showSearch
-      placeholder="Select Transformation"
+      placeholder="Tag Fields"
       onChange={props.onTransformTypeChange}
       value={props.value}
       filterOption={(input, option) => {
@@ -23,20 +23,20 @@ const TransformTypeSelector = props => {
         }
       }}
     >
-      <OptGroup label="Transform Types">
-        {Object.keys(TRANSFORM_TYPES).map(type => {
-          return (
-            <Option key={type} value={type}>
-              {TRANSFORM_TYPES[type]}
-            </Option>
-          );
-        })}
-      </OptGroup>
       <OptGroup label="DAFAA Field Types">
         {Object.keys(FIELD_TYPES).map(type => {
           return (
             <Option key={type} value={type}>
               {FIELD_TYPES[type].display}
+            </Option>
+          );
+        })}
+      </OptGroup>
+      <OptGroup label="Transform Types">
+        {Object.keys(TRANSFORM_TYPES).map(type => {
+          return (
+            <Option key={type} value={type}>
+              {TRANSFORM_TYPES[type]}
             </Option>
           );
         })}

@@ -1,9 +1,9 @@
 export const TRANSFORM_TYPES: Record<string, string> = {
+  NONE: "NONE",
   REMOVE: "REMOVE",
   PSEUDONYMIZE: "PSEUDONYMIZE",
-  TRUNCATE: "TRUNCATE",
-  SUPPRESS: "SUPPRESS",
-  NONE: "NONE"
+  TRUNCATE_LAST_3: "TRUNCATE_LAST_3",
+  SUPPRESS: "SUPPRESS_DATE_RANDOM"
 };
 
 export const FIELD_TYPES: Record<string, Record<string, string>> = {
@@ -34,8 +34,8 @@ export const FIELD_TYPES: Record<string, Record<string, string>> = {
   },
   ZIPCODE: {
     display: "Zipcode",
-    modeA: TRANSFORM_TYPES.TRUNCATE,
-    modeB: TRANSFORM_TYPES.TRUNCATE
+    modeA: TRANSFORM_TYPES.TRUNCATE_LAST_3,
+    modeB: TRANSFORM_TYPES.TRUNCATE_LAST_3
   },
   ACCOUNT_NO: {
     display: "Account Number",
@@ -48,7 +48,7 @@ export const FIELD_TYPES: Record<string, Record<string, string>> = {
     modeB: TRANSFORM_TYPES.REMOVE
   },
   URLS: {
-    display: "URLs/EMAIL",
+    display: "URLs/Email",
     modeA: TRANSFORM_TYPES.REMOVE,
     modeB: TRANSFORM_TYPES.REMOVE
   },
