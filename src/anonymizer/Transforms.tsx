@@ -5,8 +5,8 @@ import * as Matchers from "./Matchers";
 import { FIELD_TYPES, TRANSFORM_TYPES } from "./Types";
 
 interface ITransform {
-  preview: (text: String, args?: any[]) => React.ReactNode;
-  process: (text: String, args?: any[]) => String | null;
+  preview: (text: String, args?: Record<string, any>) => React.ReactNode;
+  process: (text: String, args?: Record<string, any>) => String | null;
   // Optionally define additional helper functions
   // The other functions should use function() instead of arrow functions,
   // in order to access internal functions on `this`
@@ -53,15 +53,23 @@ const Transforms: Record<string, ITransform> = {
     _hash: function(text) {
       return CryptoJS.SHA256(text).toString();
     },
-    preview: function(text) {
+    preview: function(text, args) {
+      let salt = "";
+      if (!!args) {
+        salt = args.salt;
+      }
       return (
         <span style={{ fontStyle: "italic", color: "blue" }}>
-          {`${this._hash(text).substring(0, 12)}...`}
+          {`${this._hash(text + salt).substring(0, 12)}...`}
         </span>
       );
     },
-    process: function(text) {
-      return this._hash(text);
+    process: function(text, args) {
+      let salt = "";
+      if (!!args) {
+        salt = args.salt;
+      }
+      return this._hash(text + salt);
     }
   },
   [TRANSFORM_TYPES.REMOVE]: {

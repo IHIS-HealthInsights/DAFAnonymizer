@@ -13,7 +13,8 @@ ctx.onmessage = event => {
     hasHeader,
     selectedTransforms,
     selectedMode,
-    dropIndexes
+    dropIndexes,
+    saltMap
   } = event.data;
 
   let isFirstChunk = true;
@@ -49,7 +50,7 @@ ctx.onmessage = event => {
         }
       }
 
-      data = anonymize(data, transforms, dropIndexes);
+      data = anonymize(data, transforms, dropIndexes, saltMap);
 
       let lines = Papa.unparse(data, {
         skipEmptyLines: true,
@@ -82,7 +83,8 @@ ctx.onmessage = event => {
 function anonymize(
   data: Record<string, any>[],
   transforms,
-  dropIndexes
+  dropIndexes,
+  saltMap
 ): Record<string, any>[] {
   return data
     .filter((_, i) => {
@@ -91,7 +93,9 @@ function anonymize(
     .map(record => {
       const anonymizedRecord = {};
       for (const col in record) {
-        const output = transforms[col].process(record[col]);
+        const output = transforms[col].process(record[col], {
+          salt: saltMap[col]
+        });
         if (output !== null) {
           // null means that the column will be dropped
           anonymizedRecord[col] = output;

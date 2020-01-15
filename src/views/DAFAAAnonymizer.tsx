@@ -16,7 +16,10 @@ import React, { useState } from "react";
 import AnonymizerWorker from "worker-loader!../workers/anonymizer.worker";
 import RiskAnalyzerWorker from "worker-loader!../workers/riskAnalyzer.worker";
 
-import { resolveTransform } from "../anonymizer/Transforms";
+import {
+  resolveTransform,
+  resolveTransformStr
+} from "../anonymizer/Transforms";
 import FileUploader from "./components/FileUploader";
 import KThresholdSelector from "./components/KThresholdSelector";
 import QISelector from "./components/QISelector";
@@ -24,6 +27,9 @@ import RiskAnalysisChart from "./components/RiskAnalysisChart";
 import TransformSummary from "./components/TransformSummary";
 import TransformTypeSelector from "./components/TransformTypeSelector";
 import streamSaver from "streamsaver";
+import SaltMapInput from "./components/SaltMapInput";
+import { TRANSFORM_TYPES } from "src/anonymizer/Types";
+import { generateRandomSalt } from "src/helpers";
 
 const anonymizerWorker = new AnonymizerWorker();
 const riskAnalyzerWorker = new RiskAnalyzerWorker();
@@ -74,6 +80,7 @@ const DAFAAAnonymizer = () => {
   const [fieldNames, setFieldNames] = useState([]);
   const [selectedKThreshold, setSelectedKThreshold] = useState(0);
   const [previewEnabled, setPreviewEnabled] = useState(false);
+  const [saltMap, setSaltMap] = useState({});
 
   /**
    * Define shared functions between different views
@@ -94,6 +101,7 @@ const DAFAAAnonymizer = () => {
     setPreviewRiskRecordsK(undefined);
     setFieldNames([]);
     setPreviewEnabled(false);
+    setSaltMap({});
   };
 
   /**
@@ -200,12 +208,24 @@ const DAFAAAnonymizer = () => {
               <br />
               <TransformTypeSelector
                 value={selectedTransforms[key]}
-                onTransformTypeChange={value =>
+                onTransformTypeChange={value => {
+                  if (
+                    resolveTransformStr(selectedMode, value) ===
+                    TRANSFORM_TYPES.PSEUDONYMIZE
+                  ) {
+                    // Generate a random salt if it does not already exist
+                    if (!saltMap[key]) {
+                      setSaltMap({
+                        ...saltMap,
+                        [key]: generateRandomSalt(32)
+                      });
+                    }
+                  }
                   setSelectedTransforms({
                     ...selectedTransforms,
                     [key]: value
-                  })
-                }
+                  });
+                }}
               />
             </div>
           ),
@@ -216,9 +236,10 @@ const DAFAAAnonymizer = () => {
                 width: COLUMN_WIDTH - 20
               }}
             >
-              {resolveTransform(selectedMode, selectedTransforms[key]).preview(
-                text
-              )}
+              {resolveTransform(
+                selectedMode,
+                selectedTransforms[key]
+              ).preview(text, { salt: saltMap[key] })}
             </div>
           )
         }));
@@ -317,7 +338,8 @@ const DAFAAAnonymizer = () => {
         <Card>
           <div style={{ textAlign: "left" }}>
             <strong>
-              Select Quasi Identifiers to analyze Re-idenfication Risk
+              (Optional) Select Quasi Identifiers to analyze Re-idenfication
+              Risk
             </strong>
           </div>
           <div style={{ display: "flex" }}>
@@ -452,7 +474,8 @@ const DAFAAAnonymizer = () => {
           hasHeader,
           selectedTransforms,
           selectedMode,
-          dropIndexes
+          dropIndexes,
+          saltMap
         });
 
         // Download directly to file in chunks, never storing entire file in memory
@@ -485,7 +508,10 @@ const DAFAAAnonymizer = () => {
             fieldNames={fieldNames}
             selectedTransforms={selectedTransforms}
             selectedMode={selectedMode}
+            saltMap={saltMap}
           />
+          <br />
+          <SaltMapInput setSaltMap={setSaltMap} saltMap={saltMap} />
           <br />
           <Title level={4} style={{ textAlign: "left" }}>
             2. Record-Level Suppression (using k-Anonymity)

@@ -4,7 +4,12 @@ import React from "react";
 import { resolveTransformStr } from "../../anonymizer/Transforms";
 import { FIELD_TYPES, TRANSFORM_TYPES } from "../../anonymizer/Types";
 
-const TransformSummary = ({ selectedTransforms, selectedMode, fieldNames }) => {
+const TransformSummary = ({
+  selectedTransforms,
+  selectedMode,
+  fieldNames,
+  saltMap
+}) => {
   const data = [];
   const columns = [
     {
@@ -19,12 +24,17 @@ const TransformSummary = ({ selectedTransforms, selectedMode, fieldNames }) => {
     {
       title: "Transformation To Apply",
       dataIndex: "transformType"
+    },
+    {
+      title: "Args",
+      dataIndex: "args",
+      render: text => <span style={{ fontFamily: "monospace" }}>{text}</span>
     }
   ];
   for (const field of fieldNames) {
     let fieldOrTransformType =
       selectedTransforms[field] || TRANSFORM_TYPES.NONE;
-    data.push({
+    const d = {
       key: field,
       fieldName: field,
       fieldType: FIELD_TYPES[fieldOrTransformType] ? (
@@ -33,7 +43,11 @@ const TransformSummary = ({ selectedTransforms, selectedMode, fieldNames }) => {
         <span style={{ fontStyle: "italic", color: "grey" }}>Unspecified</span>
       ),
       transformType: resolveTransformStr(selectedMode, fieldOrTransformType)
-    });
+    };
+    if (saltMap[field]) {
+      d["args"] = `salt: ${saltMap[field]}`;
+    }
+    data.push(d);
   }
   return (
     <Table
