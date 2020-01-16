@@ -33,6 +33,7 @@ import { generateRandomSalt } from "src/helpers";
 
 const anonymizerWorker = new AnonymizerWorker();
 const riskAnalyzerWorker = new RiskAnalyzerWorker();
+streamSaver.mitm = "https://dafanonymizer.clarencenpy.now.sh/mitm.html";
 
 const { Step } = Steps;
 const { Title } = Typography;

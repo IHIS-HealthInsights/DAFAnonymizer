@@ -2,6 +2,7 @@
   "name": "dafanonymizer",
   "version": "0.1.0",
   "private": true,
+  "homepage": ".",
   "dependencies": {
     "@nivo/line": "^0.59.3",
     "@react-hook/debounce": "^1.0.8",
