@@ -16,7 +16,13 @@ const SaltMapInput = ({ setSaltMap, saltMap }) => {
         <span>
           A random salt has been generated for each field you want to
           pseudonymize. You may override the defaults by editing the salt values
-          in the JSON dictionary.
+          in the JSON dictionary below.
+        </span>
+        <br />
+        <strong>Important Note:</strong>
+        <span>
+          &nbsp;Keep a copy of the salts used for pseudonymization, in order to
+          replicate the process with a different dataset
         </span>
       </p>
       <TextArea
