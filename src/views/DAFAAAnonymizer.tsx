@@ -1,5 +1,15 @@
 import { useDebounce } from "@react-hook/debounce";
-import { Button, Card, Descriptions, PageHeader, Progress, Radio, Steps, Table, Typography } from "antd";
+import {
+  Button,
+  Card,
+  Descriptions,
+  PageHeader,
+  Progress,
+  Radio,
+  Steps,
+  Table,
+  Typography
+} from "antd";
 import Papa from "papaparse";
 import React, { useState } from "react";
 import { TRANSFORM_TYPES } from "src/anonymizer/Types";
@@ -9,7 +19,10 @@ import streamSaver from "streamsaver";
 import AnonymizerWorker from "worker-loader!../workers/anonymizer.worker";
 import RiskAnalyzerWorker from "worker-loader!../workers/riskAnalyzer.worker";
 
-import { resolveTransform, resolveTransformStr } from "../anonymizer/Transforms";
+import {
+  resolveTransform,
+  resolveTransformStr
+} from "../anonymizer/Transforms";
 import FileUploader from "./components/FileUploader";
 import KThresholdSelector from "./components/KThresholdSelector";
 import QISelector from "./components/QISelector";
@@ -22,7 +35,7 @@ const anonymizerWorker = new AnonymizerWorker();
 const riskAnalyzerWorker = new RiskAnalyzerWorker();
 
 // Self-hosted streamsaver assets
-streamSaver.mitm = "/install_service_worker.html";
+streamSaver.mitm = "./install_service_worker.html";
 
 const { Step } = Steps;
 const { Title } = Typography;
@@ -469,7 +482,7 @@ const DAFAAAnonymizer = () => {
         });
 
         // Download directly to file in chunks, never storing entire file in memory
-        window.open("/install_service_worker.html", "_blank");
+        window.open("./install_service_worker.html", "_blank");
         const downloadStream = streamSaver.createWriteStream(
           `anonymized_${userFile.name}`
         );
