@@ -11,6 +11,10 @@
 	when the worker then receives a stream then the worker will tell the opener
 	to open up a link that will start the download
 -->
+
+<body>
+  <p>You may close this tab once download has completed. For large files, this might take some time.</p>
+</body>
 <script>
   // This will prevent the sw from restarting
   let keepAlive = () => {
@@ -162,7 +166,5 @@
     // shouldn't really be possible?
     keepAlive()
   }
-
-  console.log("Loaded streamSaver")
 
 </script>
