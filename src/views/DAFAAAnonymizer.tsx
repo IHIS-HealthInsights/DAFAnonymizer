@@ -339,10 +339,13 @@ const DAFAAAnonymizer = () => {
 
       return (
         <Card>
+          <Title level={4} style={{ textAlign: "left" }}>
+            Run Risk Analysis on Full Dataset
+          </Title>
           <div style={{ textAlign: "left" }}>
             <strong>
-              (Optional) Select Quasi Identifiers to analyze Re-idenfication
-              Risk
+              1. Run full-text scan for PII/SHI <br />
+              2. Select Quasi Identifiers to analyze Re-idenfication Risk
             </strong>
           </div>
           <div style={{ display: "flex" }}>
@@ -351,17 +354,19 @@ const DAFAAAnonymizer = () => {
               selectedQuasiIdentifiers={selectedQuasiIdentifiers}
               setSelectedQuasiIdentifiers={setSelectedQuasiIdentifiers}
             />
+          </div>
+          <div style={{ textAlign: "left", marginTop: 10 }}>
             <Button
-              style={{ marginLeft: 10 }}
               size="large"
               type="primary"
               onClick={onGenerateRiskReport}
               loading={riskAnalysisIsLoading}
-              disabled={selectedQuasiIdentifiers.length === 0}
+              disabled={!userFile}
             >
               Run Analysis
             </Button>
           </div>
+
           <br />
           {riskAnalysisIsLoading ? (
             <Descriptions
@@ -386,21 +391,25 @@ const DAFAAAnonymizer = () => {
           riskAnalysisReportData.matchCounts ? (
             <div style={{ textAlign: "left", marginBottom: 20 }}>
               <Title level={4}>1. Full text scan results</Title>
-              <Descriptions bordered size="small" column={1}>
-                {Object.keys(riskAnalysisReportData.matchCounts).map(
-                  matchType => (
-                    <Descriptions.Item label={matchType} key={matchType}>
-                      {Object.keys(
-                        riskAnalysisReportData.matchCounts[matchType]
-                      ).map(field => (
-                        <div key={field}>
-                          <code>{`${field}: ${riskAnalysisReportData.matchCounts[matchType][field]} matches`}</code>
-                        </div>
-                      ))}
-                    </Descriptions.Item>
-                  )
-                )}
-              </Descriptions>
+              {Object.keys(riskAnalysisReportData.matchCounts).length ? (
+                <Descriptions bordered size="small" column={1}>
+                  {Object.keys(riskAnalysisReportData.matchCounts).map(
+                    matchType => (
+                      <Descriptions.Item label={matchType} key={matchType}>
+                        {Object.keys(
+                          riskAnalysisReportData.matchCounts[matchType]
+                        ).map(field => (
+                          <div key={field}>
+                            <code>{`${field}: ${riskAnalysisReportData.matchCounts[matchType][field]} matches`}</code>
+                          </div>
+                        ))}
+                      </Descriptions.Item>
+                    )
+                  )}
+                </Descriptions>
+              ) : (
+                <p>No matches found</p>
+              )}
             </div>
           ) : null}
           {riskAnalysisChartData ? (
