@@ -23,8 +23,8 @@ export class NricMatcher implements Matcher {
 
 export class SHIMatcher implements Matcher {
   regexes = [
-    /(AIDS|VDRL|RPR|TPPA|TPHA|HSV)/g,
-    /(abuse|addition|alcoholism|cannabis|hiv)/gi
+    /\b(AIDS|VDRL|RPR|TPPA|TPHA|HSV)\b/g,
+    /\b(abuse|addiction|alcoholism|cannabis|hiv)\b/gi
   ];
   description = "Sensitive Health Information";
   match(text) {
