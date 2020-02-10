@@ -8,7 +8,7 @@ const TransformSummary = ({
   selectedTransforms,
   selectedMode,
   fieldNames,
-  saltMap
+  args
 }) => {
   const data = [];
   const columns = [
@@ -44,9 +44,12 @@ const TransformSummary = ({
       ),
       transformType: resolveTransformStr(selectedMode, fieldOrTransformType)
     };
-    if (saltMap[field]) {
-      d["args"] = `salt: ${saltMap[field]}`;
+
+    // display args for each field, if exist
+    if (args[field]) {
+      d["args"] = JSON.stringify(args[field]);
     }
+
     data.push(d);
   }
   return (

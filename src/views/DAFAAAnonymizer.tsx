@@ -47,6 +47,7 @@ const DAFAAAnonymizer = () => {
   const MAX_SIZE_FOR_PREVIEW_MB = 50;
   const MAX_SIZE_FOR_PREVIEW = MAX_SIZE_FOR_PREVIEW_MB * 1024 * 1024; //MB
   const MAX_PREVIEW_COUNT = 50;
+  const PSEUDONYMIZE_OUTPUT_LENGTH = 10;
 
   const [userFile, setUserFile] = useState();
   const [fileReadPercent, setFileReadPercent] = useDebounce(
@@ -512,6 +513,17 @@ const DAFAAAnonymizer = () => {
         };
       };
 
+      // Collate args from transformations into a single object
+      const transformArgs = {};
+      fieldNames.forEach(field => {
+        if (saltMap[field]) {
+          if (!transformArgs[field]) {
+            transformArgs[field] = {};
+          }
+          transformArgs[field] = { salt: saltMap[field] };
+        }
+      });
+
       return (
         <Card>
           <Title level={4} style={{ textAlign: "left" }}>
@@ -521,7 +533,7 @@ const DAFAAAnonymizer = () => {
             fieldNames={fieldNames}
             selectedTransforms={selectedTransforms}
             selectedMode={selectedMode}
-            saltMap={saltMap}
+            args={transformArgs}
           />
           <br />
           <SaltMapInput setSaltMap={setSaltMap} saltMap={saltMap} />
