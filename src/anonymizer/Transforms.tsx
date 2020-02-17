@@ -69,7 +69,10 @@ const Transforms: Record<string, ITransform> = {
       }
       return (
         <span style={{ fontStyle: "italic", color: "blue" }}>
-          {`${this._hash(text + salt).substring(0, 12)}...`}
+          {`${this._hash(text + salt).substring(
+            0,
+            args[fieldName].PSEUDONYMIZE.output_len
+          )}...`}
         </span>
       );
     },
@@ -78,7 +81,10 @@ const Transforms: Record<string, ITransform> = {
       if (!!args) {
         salt = args.salt;
       }
-      return this._hash(text + salt);
+      return this._hash(text + salt).substring(
+        0,
+        args[fieldName].PSEUDONYMIZE.output_len
+      );
     }
   },
   [TRANSFORM_TYPES.ENCRYPT]: {

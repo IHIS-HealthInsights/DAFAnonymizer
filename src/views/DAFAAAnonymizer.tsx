@@ -228,15 +228,19 @@ const DAFAAAnonymizer = () => {
                           ...saltMap,
                           [key]: generateRandomSalt(32)
                         });
+                        argsMap[key] = {
+                          ...argsMap[key],
+                          PSEUDONYMIZE: {
+                            output_len: PSEUDONYMIZE_OUTPUT_LENGTH
+                          }
+                        };
+                        setArgsMap(argsMap);
                       }
                       break;
                     case TRANSFORM_TYPES.ENCRYPT:
                       const passphrase = prompt(
                         "Please enter passphrase (required):"
                       );
-                      if (!argsMap[key]) {
-                        argsMap[key] = {};
-                      }
                       argsMap[key] = {
                         ...argsMap[key],
                         ENCRYPT: { passphrase: passphrase }
@@ -247,9 +251,6 @@ const DAFAAAnonymizer = () => {
                       const dpassphrase = prompt(
                         "Please enter passphrase (required):"
                       );
-                      if (!argsMap[key]) {
-                        argsMap[key] = {};
-                      }
                       argsMap[key] = {
                         ...argsMap[key],
                         DECRYPT: { passphrase: dpassphrase }
