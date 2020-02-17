@@ -3,7 +3,7 @@ import React from "react";
 
 import * as Matchers from "./Matchers";
 import { FIELD_TYPES, TRANSFORM_TYPES } from "./Types";
-import { ascii_to_hex } from "src/helpers";
+import { ascii_to_hex, hex_to_ascii } from "src/helpers";
 
 interface ITransform {
   preview: (
@@ -83,23 +83,35 @@ const Transforms: Record<string, ITransform> = {
   },
   [TRANSFORM_TYPES.ENCRYPT]: {
     _encrypt: function(text, passphrase) {
-      const key = CryptoJS.enc.Base64.parse(passphrase);
-      const iv = CryptoJS.enc.Base64.parse(passphrase);
-      const e = CryptoJS.AES.encrypt(text, key, { iv: iv });
+      const e = CryptoJS.AES.encrypt(text, passphrase);
       return ascii_to_hex(e.toString());
     },
     preview: function(text, fieldName, args) {
       return (
-        <span style={{ fontStyle: "italic", color: "blue" }}>
-          {`${this._encrypt(text, args[fieldName].ENCRYPT.passphrase).substring(
-            0,
-            12
-          )}...`}
-        </span>
+        <span style={{ fontStyle: "italic", color: "blue" }}>{"*****"}</span>
       );
     },
     process: function(text, fieldName, args) {
       return this._encrypt(text, args[fieldName].ENCRYPT.passphrase);
+    }
+  },
+  [TRANSFORM_TYPES.DECRYPT]: {
+    _decrypt: function(ciphertext, passphrase) {
+      const plaintext = CryptoJS.AES.decrypt(
+        hex_to_ascii(ciphertext),
+        passphrase
+      );
+      return plaintext.toString(CryptoJS.enc.Utf8);
+    },
+    preview: function(text, fieldName, args) {
+      return (
+        <span style={{ fontStyle: "italic", color: "blue" }}>
+          {this._decrypt(text, args[fieldName].DECRYPT.passphrase)}
+        </span>
+      );
+    },
+    process: function(text, fieldName, args) {
+      return this._decrypt(text, args[fieldName].DECRYPT.passphrase);
     }
   },
   [TRANSFORM_TYPES.REMOVE]: {

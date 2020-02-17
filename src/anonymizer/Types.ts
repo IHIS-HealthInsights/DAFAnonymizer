@@ -4,7 +4,8 @@ export const TRANSFORM_TYPES: Record<string, string> = {
   PSEUDONYMIZE: "PSEUDONYMIZE",
   TRUNCATE_LAST_3: "TRUNCATE_LAST_3",
   SUPPRESS: "SUPPRESS_DATE_RANDOM",
-  ENCRYPT: "ENCRYPT"
+  ENCRYPT: "ENCRYPT",
+  DECRYPT: "DECRYPT"
 };
 
 export const FIELD_TYPES: Record<string, Record<string, string>> = {

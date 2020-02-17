@@ -107,6 +107,7 @@ const DAFAAAnonymizer = () => {
     setFieldNames([]);
     setPreviewEnabled(false);
     setSaltMap({});
+    setArgsMap({});
   };
 
   /**
@@ -214,28 +215,49 @@ const DAFAAAnonymizer = () => {
               <TransformTypeSelector
                 value={selectedTransforms[key]}
                 onTransformTypeChange={value => {
-                  if (
-                    resolveTransformStr(selectedMode, value) ===
-                    TRANSFORM_TYPES.PSEUDONYMIZE
-                  ) {
-                    // Generate a random salt if it does not already exist
-                    if (!saltMap[key]) {
-                      setSaltMap({
-                        ...saltMap,
-                        [key]: generateRandomSalt(32)
-                      });
-                    }
-                  } else if (
-                    resolveTransformStr(selectedMode, value) ===
-                    TRANSFORM_TYPES.ENCRYPT
-                  ) {
-                    const passphrase = prompt("Please select passphrase");
-                    if (!argsMap[key]) {
-                      argsMap[key] = { ENCRYPT: {} };
-                    }
-                    argsMap[key].ENCRYPT["passphrase"] = passphrase;
-                    setArgsMap(argsMap);
+                  // Set default options based on transformType
+                  const transformType = resolveTransformStr(
+                    selectedMode,
+                    value
+                  );
+                  switch (transformType) {
+                    case TRANSFORM_TYPES.PSEUDONYMIZE:
+                      // Generate a random salt if it does not already exist
+                      if (!saltMap[key]) {
+                        setSaltMap({
+                          ...saltMap,
+                          [key]: generateRandomSalt(32)
+                        });
+                      }
+                      break;
+                    case TRANSFORM_TYPES.ENCRYPT:
+                      const passphrase = prompt(
+                        "Please enter passphrase (required):"
+                      );
+                      if (!argsMap[key]) {
+                        argsMap[key] = {};
+                      }
+                      argsMap[key] = {
+                        ...argsMap[key],
+                        ENCRYPT: { passphrase: passphrase }
+                      };
+                      setArgsMap(argsMap);
+                      break;
+                    case TRANSFORM_TYPES.DECRYPT:
+                      const dpassphrase = prompt(
+                        "Please enter passphrase (required):"
+                      );
+                      if (!argsMap[key]) {
+                        argsMap[key] = {};
+                      }
+                      argsMap[key] = {
+                        ...argsMap[key],
+                        DECRYPT: { passphrase: dpassphrase }
+                      };
+                      setArgsMap(argsMap);
+                      break;
                   }
+
                   setSelectedTransforms({
                     ...selectedTransforms,
                     [key]: value
