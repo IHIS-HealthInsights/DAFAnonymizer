@@ -46,8 +46,13 @@ const TransformSummary = ({
     };
 
     // display args for each field, if exist
-    if (args[field]) {
-      d["args"] = JSON.stringify(args[field]);
+    if (
+      args[field] &&
+      args[field][resolveTransformStr(selectedMode, fieldOrTransformType)]
+    ) {
+      d["args"] = JSON.stringify(
+        args[field][resolveTransformStr(selectedMode, fieldOrTransformType)]
+      );
     }
 
     data.push(d);

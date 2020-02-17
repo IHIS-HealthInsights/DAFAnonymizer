@@ -85,6 +85,7 @@ const DAFAAAnonymizer = () => {
   const [selectedKThreshold, setSelectedKThreshold] = useState(0);
   const [previewEnabled, setPreviewEnabled] = useState(false);
   const [saltMap, setSaltMap] = useState({});
+  const [argsMap, setArgsMap] = useState({});
 
   /**
    * Define shared functions between different views
@@ -224,6 +225,16 @@ const DAFAAAnonymizer = () => {
                         [key]: generateRandomSalt(32)
                       });
                     }
+                  } else if (
+                    resolveTransformStr(selectedMode, value) ===
+                    TRANSFORM_TYPES.ENCRYPT
+                  ) {
+                    const passphrase = prompt("Please select passphrase");
+                    if (!argsMap[key]) {
+                      argsMap[key] = { ENCRYPT: {} };
+                    }
+                    argsMap[key].ENCRYPT["passphrase"] = passphrase;
+                    setArgsMap(argsMap);
                   }
                   setSelectedTransforms({
                     ...selectedTransforms,
@@ -243,7 +254,7 @@ const DAFAAAnonymizer = () => {
               {resolveTransform(
                 selectedMode,
                 selectedTransforms[key]
-              ).preview(text, { salt: saltMap[key] })}
+              ).preview(text, key, { salt: saltMap[key], ...argsMap })}
             </div>
           )
         }));
@@ -488,7 +499,8 @@ const DAFAAAnonymizer = () => {
           selectedTransforms,
           selectedMode,
           dropIndexes,
-          saltMap
+          saltMap,
+          argsMap
         });
 
         // Download directly to file in chunks, never storing entire file in memory
@@ -514,13 +526,16 @@ const DAFAAAnonymizer = () => {
       };
 
       // Collate args from transformations into a single object
-      const transformArgs = {};
+      const transformArgs = argsMap;
       fieldNames.forEach(field => {
         if (saltMap[field]) {
           if (!transformArgs[field]) {
             transformArgs[field] = {};
           }
-          transformArgs[field] = { salt: saltMap[field] };
+          transformArgs[field] = {
+            ...transformArgs[field],
+            salt: saltMap[field]
+          };
         }
       });
 
