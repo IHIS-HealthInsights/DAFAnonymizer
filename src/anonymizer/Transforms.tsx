@@ -101,7 +101,11 @@ const Transforms: Record<string, ITransform> = {
         hex_to_ascii(ciphertext),
         passphrase
       );
-      return plaintext.toString(CryptoJS.enc.Utf8);
+      try {
+        return plaintext.toString(CryptoJS.enc.Utf8);
+      } catch (error) {
+        return "Malformed String - Passphrase is likely incorrect";
+      }
     },
     preview: function(text, fieldName, args) {
       return (
