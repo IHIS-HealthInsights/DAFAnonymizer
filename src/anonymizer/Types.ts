@@ -44,28 +44,19 @@ export const FIELD_TYPES: Record<string, Record<string, string>> = {
     modeA: TRANSFORM_TYPES.REMOVE,
     modeB: TRANSFORM_TYPES.REMOVE
   },
-  BIOMETRICS: {
-    display: "Biometrics/Photographs",
-    modeA: TRANSFORM_TYPES.REMOVE,
-    modeB: TRANSFORM_TYPES.REMOVE
-  },
+  // NA now as we only accept CSV data
+  // BIOMETRICS: {
+  //   display: "Biometrics/Photographs",
+  //   modeA: TRANSFORM_TYPES.REMOVE,
+  //   modeB: TRANSFORM_TYPES.REMOVE
+  // },
   URLS: {
-    display: "URLs/Email",
+    display: "URLS/Email",
     modeA: TRANSFORM_TYPES.REMOVE,
     modeB: TRANSFORM_TYPES.REMOVE
   },
-  DOB: {
-    display: "Date of Birth",
-    modeA: TRANSFORM_TYPES.SUPPRESS,
-    modeB: TRANSFORM_TYPES.NONE
-  },
-  DOD: {
-    display: "Date of Death",
-    modeA: TRANSFORM_TYPES.SUPPRESS,
-    modeB: TRANSFORM_TYPES.NONE
-  },
-  OTHERDATES: {
-    display: "Other Dates",
+  DATES: {
+    display: "Dates (DOB/DOD/Others)",
     modeA: TRANSFORM_TYPES.SUPPRESS,
     modeB: TRANSFORM_TYPES.NONE
   }
