@@ -136,14 +136,14 @@ const Transforms: Record<string, ITransform> = {
       return null;
     }
   },
-  [TRANSFORM_TYPES.TRUNCATE]: {
+  [TRANSFORM_TYPES.TRUNCATE_RIGHT]: {
     preview: function(text, fieldName, args) {
-      const fromRight = args[fieldName].TRUNCATE.fromRight;
+      const num_chars = args[fieldName].TRUNCATE_RIGHT.num_chars;
       return (
         <div>
-          <span>{text.substring(0, text.length - fromRight)}</span>{" "}
+          <span>{text.substring(0, text.length - num_chars)}</span>{" "}
           <span style={{ textDecoration: "line-through", color: "grey" }}>
-            {text.substring(text.length - fromRight, text.length)}
+            {text.substring(text.length - num_chars, text.length)}
           </span>
         </div>
       );
@@ -151,7 +151,26 @@ const Transforms: Record<string, ITransform> = {
     process: function(text, fieldName, args) {
       return text.substring(
         0,
-        text.length - args[fieldName].TRUNCATE.fromRight
+        text.length - args[fieldName].TRUNCATE_RIGHT.num_chars
+      );
+    }
+  },
+  [TRANSFORM_TYPES.TRUNCATE_LEFT]: {
+    preview: function(text, fieldName, args) {
+      const num_chars = args[fieldName].TRUNCATE_LEFT.num_chars;
+      return (
+        <div>
+          <span style={{ textDecoration: "line-through", color: "grey" }}>
+            {text.substring(0, num_chars)}
+          </span>
+          <span>{text.substring(num_chars, text.length)}</span>{" "}
+        </div>
+      );
+    },
+    process: function(text, fieldName, args) {
+      return text.substring(
+        args[fieldName].TRUNCATE_LEFT.num_chars,
+        text.length
       );
     }
   }

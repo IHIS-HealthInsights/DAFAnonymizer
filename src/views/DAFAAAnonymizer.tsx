@@ -234,40 +234,57 @@ const DAFAAAnonymizer = () => {
                             output_len: PSEUDONYMIZE_OUTPUT_LENGTH
                           }
                         };
-                        setArgsMap(argsMap);
                       }
                       break;
                     case TRANSFORM_TYPES.ENCRYPT:
-                      const passphrase = prompt(
-                        "Please enter passphrase (required):"
-                      );
+                      const passphrase = prompt("Enter passphrase (required):");
                       argsMap[key] = {
                         ...argsMap[key],
                         ENCRYPT: { passphrase: passphrase }
                       };
-                      setArgsMap(argsMap);
                       break;
                     case TRANSFORM_TYPES.DECRYPT:
                       const dpassphrase = prompt(
-                        "Please enter passphrase (required):"
+                        "Enter passphrase (required):"
                       );
                       argsMap[key] = {
                         ...argsMap[key],
                         DECRYPT: { passphrase: dpassphrase }
                       };
-                      setArgsMap(argsMap);
                       break;
-                    case TRANSFORM_TYPES.TRUNCATE:
+                    case TRANSFORM_TYPES.TRUNCATE_RIGHT:
                       if (value === "ZIPCODE") {
                         // Convert this into generic TRUNCATE transform
                         argsMap[key] = {
                           ...argsMap[key],
-                          TRUNCATE: { fromRight: 3 }
+                          TRUNCATE_RIGHT: { num_chars: 3 }
                         };
-                        setArgsMap(argsMap);
+                      } else {
+                        const fromRight = parseInt(
+                          prompt(
+                            "Truncate how many characters from right (required):"
+                          )
+                        );
+                        argsMap[key] = {
+                          ...argsMap[key],
+                          TRUNCATE_RIGHT: { num_chars: fromRight }
+                        };
                       }
                       break;
+                    case TRANSFORM_TYPES.TRUNCATE_LEFT:
+                      const fromLeft = parseInt(
+                        prompt(
+                          "Truncate how many characters from left (required):",
+                          "3"
+                        )
+                      );
+                      argsMap[key] = {
+                        ...argsMap[key],
+                        TRUNCATE_LEFT: { num_chars: fromLeft }
+                      };
+                      break;
                   }
+                  setArgsMap(argsMap);
 
                   setSelectedTransforms({
                     ...selectedTransforms,
