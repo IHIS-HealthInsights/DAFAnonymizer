@@ -551,13 +551,10 @@ const DAFAAAnonymizer = () => {
       const transformArgs = argsMap;
       fieldNames.forEach(field => {
         if (saltMap[field]) {
-          if (!transformArgs[field]) {
-            transformArgs[field] = {};
-          }
           transformArgs[field] = {
-            ...transformArgs[field],
-            salt: saltMap[field]
+            ...transformArgs[field]
           };
+          transformArgs[field].PSEUDONYMIZE["salt"] = saltMap[field];
         }
       });
 
