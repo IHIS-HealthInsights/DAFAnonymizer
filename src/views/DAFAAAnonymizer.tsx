@@ -12,8 +12,8 @@ import {
 } from "antd";
 import Papa from "papaparse";
 import React, { useState } from "react";
-import { TRANSFORM_TYPES, FIELD_TYPES } from "src/anonymizer/Types";
-import { generateRandomSalt } from "src/helpers";
+import { TRANSFORM_TYPES } from "src/anonymizer/Types";
+import { generateRandomSalt, promptInt, promptString } from "src/helpers";
 import streamSaver from "streamsaver";
 /* eslint import/no-webpack-loader-syntax: off */
 import AnonymizerWorker from "worker-loader!../workers/anonymizer.worker";
@@ -237,14 +237,16 @@ const DAFAAAnonymizer = () => {
                       }
                       break;
                     case TRANSFORM_TYPES.ENCRYPT:
-                      const passphrase = prompt("Enter passphrase (required):");
+                      const passphrase = promptString(
+                        "Enter passphrase (required):"
+                      );
                       argsMap[key] = {
                         ...argsMap[key],
                         ENCRYPT: { passphrase: passphrase }
                       };
                       break;
                     case TRANSFORM_TYPES.DECRYPT:
-                      const dpassphrase = prompt(
+                      const dpassphrase = promptString(
                         "Enter passphrase (required):"
                       );
                       argsMap[key] = {
@@ -260,10 +262,9 @@ const DAFAAAnonymizer = () => {
                           TRUNCATE_RIGHT: { num_chars: 3 }
                         };
                       } else {
-                        const fromRight = parseInt(
-                          prompt(
-                            "Truncate how many characters from right (required):"
-                          )
+                        const fromRight = promptInt(
+                          "Num chars to truncate from right (required):",
+                          3
                         );
                         argsMap[key] = {
                           ...argsMap[key],
@@ -272,11 +273,9 @@ const DAFAAAnonymizer = () => {
                       }
                       break;
                     case TRANSFORM_TYPES.TRUNCATE_LEFT:
-                      const fromLeft = parseInt(
-                        prompt(
-                          "Truncate how many characters from left (required):",
-                          "3"
-                        )
+                      const fromLeft = promptInt(
+                        "Num chars to truncate from left (required):",
+                        3
                       );
                       argsMap[key] = {
                         ...argsMap[key],

@@ -20,3 +20,19 @@ export const hex_to_ascii = str1 => {
   }
   return str;
 };
+
+export const promptInt = (text: string, defaultInt?: number): number => {
+  let i = NaN;
+  while (Number.isNaN(i)) {
+    i = parseInt(prompt(text, "" + (defaultInt || 0)));
+  }
+  return i;
+};
+
+export const promptString = (text: string, defaultStr?: string): string => {
+  let s = "";
+  while (s === null || s.length === 0) {
+    s = prompt(text, defaultStr || "");
+  }
+  return s;
+};
