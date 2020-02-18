@@ -527,7 +527,6 @@ const DAFAAAnonymizer = () => {
         });
 
         // Download directly to file in chunks, never storing entire file in memory
-        window.open("./install_service_worker.html", "_blank");
         const downloadStream = streamSaver.createWriteStream(
           `anonymized_${userFile.name}`
         );
