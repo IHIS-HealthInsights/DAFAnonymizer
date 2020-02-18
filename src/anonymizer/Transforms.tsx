@@ -136,20 +136,23 @@ const Transforms: Record<string, ITransform> = {
       return null;
     }
   },
-  [TRANSFORM_TYPES.TRUNCATE_LAST_3]: {
-    // TODO: Make this implementation generic to accept truncate length
-    preview: function(text) {
+  [TRANSFORM_TYPES.TRUNCATE]: {
+    preview: function(text, fieldName, args) {
+      const fromRight = args[fieldName].TRUNCATE.fromRight;
       return (
         <div>
-          <span>{text.substring(0, text.length - 3)}</span>{" "}
+          <span>{text.substring(0, text.length - fromRight)}</span>{" "}
           <span style={{ textDecoration: "line-through", color: "grey" }}>
-            {text.substring(text.length - 3, text.length)}
+            {text.substring(text.length - fromRight, text.length)}
           </span>
         </div>
       );
     },
-    process: function(text) {
-      return text.substring(0, text.length - 3);
+    process: function(text, fieldName, args) {
+      return text.substring(
+        0,
+        text.length - args[fieldName].TRUNCATE.fromRight
+      );
     }
   }
 };

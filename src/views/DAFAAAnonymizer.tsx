@@ -12,7 +12,7 @@ import {
 } from "antd";
 import Papa from "papaparse";
 import React, { useState } from "react";
-import { TRANSFORM_TYPES } from "src/anonymizer/Types";
+import { TRANSFORM_TYPES, FIELD_TYPES } from "src/anonymizer/Types";
 import { generateRandomSalt } from "src/helpers";
 import streamSaver from "streamsaver";
 /* eslint import/no-webpack-loader-syntax: off */
@@ -256,6 +256,16 @@ const DAFAAAnonymizer = () => {
                         DECRYPT: { passphrase: dpassphrase }
                       };
                       setArgsMap(argsMap);
+                      break;
+                    case TRANSFORM_TYPES.TRUNCATE:
+                      if (value === "ZIPCODE") {
+                        // Convert this into generic TRUNCATE transform
+                        argsMap[key] = {
+                          ...argsMap[key],
+                          TRUNCATE: { fromRight: 3 }
+                        };
+                        setArgsMap(argsMap);
+                      }
                       break;
                   }
 
