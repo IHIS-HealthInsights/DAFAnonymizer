@@ -590,6 +590,15 @@ const DAFAAAnonymizer = () => {
         }
       });
 
+      const showSaltMapInput = !Object.keys(selectedTransforms).every(field => {
+        return (
+          resolveTransformStr(
+            selectedMode,
+            selectedTransforms[field] || TRANSFORM_TYPES.NONE
+          ) !== TRANSFORM_TYPES.PSEUDONYMIZE
+        );
+      });
+
       return (
         <Card>
           <Title level={4} style={{ textAlign: "left" }}>
@@ -602,7 +611,11 @@ const DAFAAAnonymizer = () => {
             args={transformArgs}
           />
           <br />
-          <SaltMapInput setSaltMap={setSaltMap} saltMap={saltMap} />
+          {/* Hide custom salt input if PSEUDONYMIZE not selected */}
+          {showSaltMapInput ? (
+            <SaltMapInput setSaltMap={setSaltMap} saltMap={saltMap} />
+          ) : null}
+
           <br />
           <Title level={4} style={{ textAlign: "left" }}>
             2. Record-Level Suppression (using k-Anonymity)
