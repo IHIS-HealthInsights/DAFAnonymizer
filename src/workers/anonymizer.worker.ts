@@ -95,9 +95,9 @@ function anonymize(
     .map(record => {
       const anonymizedRecord = {};
       for (const col in record) {
-        const output = transforms[col].process(record[col], col, {
+        const output = transforms[col].process(record[col], {
           salt: saltMap[col],
-          ...argsMap
+          ...argsMap[col]
         });
         if (output !== null) {
           // null means that the column will be dropped

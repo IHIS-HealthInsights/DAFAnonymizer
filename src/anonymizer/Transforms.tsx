@@ -6,16 +6,8 @@ import { FIELD_TYPES, TRANSFORM_TYPES } from "./Types";
 import { ascii_to_hex, hex_to_ascii } from "src/helpers";
 
 interface ITransform {
-  preview: (
-    text: string,
-    fieldName: string,
-    args?: Record<string, any>
-  ) => React.ReactNode;
-  process: (
-    text: string,
-    fieldName: string,
-    args?: Record<string, any>
-  ) => string | null;
+  preview: (text: string, args: Record<string, any>) => React.ReactNode;
+  process: (text: string, args: Record<string, any>) => string | null;
   // Optionally define additional helper functions
   // The other functions should use function() instead of arrow functions,
   // in order to access internal functions on `this`
@@ -62,29 +54,18 @@ const Transforms: Record<string, ITransform> = {
     _hash: function(text) {
       return CryptoJS.SHA256(text).toString();
     },
-    preview: function(text, fieldName, args) {
-      let salt = "";
-      if (!!args) {
-        salt = args.salt;
-      }
+    preview: function(text, args) {
       return (
         <span style={{ fontStyle: "italic", color: "blue" }}>
-          {`${this._hash(text + salt).substring(
+          {`${this._hash(text + args.salt || "").substring(
             0,
-            args[fieldName].PSEUDONYMIZE.output_len
+            args.output_len
           )}...`}
         </span>
       );
     },
-    process: function(text, fieldName, args) {
-      let salt = "";
-      if (!!args) {
-        salt = args.salt;
-      }
-      return this._hash(text + salt).substring(
-        0,
-        args[fieldName].PSEUDONYMIZE.output_len
-      );
+    process: function(text, args) {
+      return this._hash(text + args.salt || "").substring(0, args.output_len);
     }
   },
   [TRANSFORM_TYPES.ENCRYPT]: {
@@ -92,13 +73,13 @@ const Transforms: Record<string, ITransform> = {
       const e = CryptoJS.AES.encrypt(text, passphrase);
       return ascii_to_hex(e.toString());
     },
-    preview: function(text, fieldName, args) {
+    preview: function(text, args) {
       return (
         <span style={{ fontStyle: "italic", color: "blue" }}>{"*****"}</span>
       );
     },
-    process: function(text, fieldName, args) {
-      return this._encrypt(text, args[fieldName].ENCRYPT.passphrase);
+    process: function(text, args) {
+      return this._encrypt(text, args.passphrase);
     }
   },
   [TRANSFORM_TYPES.DECRYPT]: {
@@ -113,15 +94,15 @@ const Transforms: Record<string, ITransform> = {
         return "Malformed String - Passphrase is likely incorrect";
       }
     },
-    preview: function(text, fieldName, args) {
+    preview: function(text, args) {
       return (
         <span style={{ fontStyle: "italic", color: "blue" }}>
-          {this._decrypt(text, args[fieldName].DECRYPT.passphrase)}
+          {this._decrypt(text, args.passphrase)}
         </span>
       );
     },
-    process: function(text, fieldName, args) {
-      return this._decrypt(text, args[fieldName].DECRYPT.passphrase);
+    process: function(text, args) {
+      return this._decrypt(text, args.passphrase);
     }
   },
   [TRANSFORM_TYPES.REMOVE]: {
@@ -137,41 +118,33 @@ const Transforms: Record<string, ITransform> = {
     }
   },
   [TRANSFORM_TYPES.TRUNCATE_RIGHT]: {
-    preview: function(text, fieldName, args) {
-      const num_chars = args[fieldName].TRUNCATE_RIGHT.num_chars;
+    preview: function(text, args) {
       return (
         <div>
-          <span>{text.substring(0, text.length - num_chars)}</span>{" "}
+          <span>{text.substring(0, text.length - args.num_chars)}</span>{" "}
           <span style={{ textDecoration: "line-through", color: "grey" }}>
-            {text.substring(text.length - num_chars, text.length)}
+            {text.substring(text.length - args.num_chars, text.length)}
           </span>
         </div>
       );
     },
-    process: function(text, fieldName, args) {
-      return text.substring(
-        0,
-        text.length - args[fieldName].TRUNCATE_RIGHT.num_chars
-      );
+    process: function(text, args) {
+      return text.substring(0, text.length - args.num_chars);
     }
   },
   [TRANSFORM_TYPES.TRUNCATE_LEFT]: {
-    preview: function(text, fieldName, args) {
-      const num_chars = args[fieldName].TRUNCATE_LEFT.num_chars;
+    preview: function(text, args) {
       return (
         <div>
           <span style={{ textDecoration: "line-through", color: "grey" }}>
-            {text.substring(0, num_chars)}
+            {text.substring(0, args.num_chars)}
           </span>
-          <span>{text.substring(num_chars, text.length)}</span>{" "}
+          <span>{text.substring(args.num_chars, text.length)}</span>{" "}
         </div>
       );
     },
-    process: function(text, fieldName, args) {
-      return text.substring(
-        args[fieldName].TRUNCATE_LEFT.num_chars,
-        text.length
-      );
+    process: function(text, args) {
+      return text.substring(args.num_chars, text.length);
     }
   }
 };

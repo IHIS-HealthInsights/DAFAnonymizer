@@ -229,10 +229,7 @@ const DAFAAAnonymizer = () => {
                           [key]: generateRandomSalt(32)
                         });
                         argsMap[key] = {
-                          ...argsMap[key],
-                          PSEUDONYMIZE: {
-                            output_len: PSEUDONYMIZE_OUTPUT_LENGTH
-                          }
+                          output_len: PSEUDONYMIZE_OUTPUT_LENGTH
                         };
                       }
                       break;
@@ -241,8 +238,7 @@ const DAFAAAnonymizer = () => {
                         "Enter passphrase (required):"
                       );
                       argsMap[key] = {
-                        ...argsMap[key],
-                        ENCRYPT: { passphrase: passphrase }
+                        passphrase: passphrase
                       };
                       break;
                     case TRANSFORM_TYPES.DECRYPT:
@@ -250,16 +246,14 @@ const DAFAAAnonymizer = () => {
                         "Enter passphrase (required):"
                       );
                       argsMap[key] = {
-                        ...argsMap[key],
-                        DECRYPT: { passphrase: dpassphrase }
+                        passphrase: dpassphrase
                       };
                       break;
                     case TRANSFORM_TYPES.TRUNCATE_RIGHT:
                       if (value === "ZIPCODE") {
                         // Convert this into generic TRUNCATE transform
                         argsMap[key] = {
-                          ...argsMap[key],
-                          TRUNCATE_RIGHT: { num_chars: 3 }
+                          num_chars: 3
                         };
                       } else {
                         const fromRight = promptInt(
@@ -267,8 +261,7 @@ const DAFAAAnonymizer = () => {
                           3
                         );
                         argsMap[key] = {
-                          ...argsMap[key],
-                          TRUNCATE_RIGHT: { num_chars: fromRight }
+                          num_chars: fromRight
                         };
                       }
                       break;
@@ -278,8 +271,7 @@ const DAFAAAnonymizer = () => {
                         3
                       );
                       argsMap[key] = {
-                        ...argsMap[key],
-                        TRUNCATE_LEFT: { num_chars: fromLeft }
+                        num_chars: fromLeft
                       };
                       break;
                   }
@@ -300,10 +292,13 @@ const DAFAAAnonymizer = () => {
                 width: COLUMN_WIDTH - 20
               }}
             >
-              {resolveTransform(
-                selectedMode,
-                selectedTransforms[key]
-              ).preview(text, key, { salt: saltMap[key], ...argsMap })}
+              {resolveTransform(selectedMode, selectedTransforms[key]).preview(
+                text,
+                {
+                  salt: saltMap[key],
+                  ...argsMap[key]
+                }
+              )}
             </div>
           )
         }));
@@ -580,7 +575,7 @@ const DAFAAAnonymizer = () => {
           transformArgs[field] = {
             ...transformArgs[field]
           };
-          transformArgs[field].PSEUDONYMIZE["salt"] = saltMap[field];
+          transformArgs[field]["salt"] = saltMap[field];
         }
       });
 
