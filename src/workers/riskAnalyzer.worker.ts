@@ -37,6 +37,10 @@ ctx.onmessage = event => {
   const groups = {};
   let curCount = 0;
   let matchCounts = {};
+  const matchers: Matcher[] = [new NricMatcher(), new SHIMatcher()];
+  for (let m of matchers) {
+    matchCounts[m.description] = {};
+  }
 
   Papa.parse(file, {
     skipEmptyLines: true,
@@ -63,20 +67,20 @@ ctx.onmessage = event => {
         const row = data[chunkIndex];
 
         // 1. Scan for PII and SHI
-        const matchers: Matcher[] = [new NricMatcher(), new SHIMatcher()];
         for (let key in row) {
           const text = row[key];
           for (const matcher of matchers) {
             const count = matcher.match(text).length;
             if (count > 0) {
-              if (matchCounts[matcher.description]) {
-                if (matchCounts[matcher.description][key]) {
-                  matchCounts[matcher.description][key] += count;
-                } else {
-                  matchCounts[matcher.description][key] = count;
-                }
-              } else {
-                matchCounts[matcher.description] = { [key]: count };
+              if (!matchCounts[matcher.description][key]) {
+                matchCounts[matcher.description][key] = {
+                  count: 0,
+                  examples: []
+                };
+              }
+              matchCounts[matcher.description][key].count += count;
+              if (matchCounts[matcher.description][key].examples.length < 5) {
+                matchCounts[matcher.description][key].examples.push(text);
               }
             }
           }

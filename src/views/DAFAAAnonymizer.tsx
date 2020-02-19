@@ -454,11 +454,22 @@ const DAFAAAnonymizer = () => {
                       <Descriptions.Item label={matchType} key={matchType}>
                         {Object.keys(
                           riskAnalysisReportData.matchCounts[matchType]
-                        ).map(field => (
-                          <div key={field}>
-                            <code>{`${field}: ${riskAnalysisReportData.matchCounts[matchType][field]} matches`}</code>
-                          </div>
-                        ))}
+                        ).map(field => {
+                          const f =
+                            riskAnalysisReportData.matchCounts[matchType][
+                              field
+                            ];
+                          let s = `${field}: ${f.count} matches`;
+                          if (f.count > 0) {
+                            s += ` (${f.examples})`;
+                          }
+
+                          return (
+                            <div key={field}>
+                              <code>{s}</code>
+                            </div>
+                          );
+                        })}
                       </Descriptions.Item>
                     )
                   )}
@@ -468,7 +479,7 @@ const DAFAAAnonymizer = () => {
               )}
             </div>
           ) : null}
-          {riskAnalysisChartData ? (
+          {selectedQuasiIdentifiers.length > 0 && riskAnalysisChartData ? (
             <div style={{ height: 300, marginBottom: 70 }}>
               <Title level={4} style={{ textAlign: "left" }}>
                 2. Risk vs Utility Tradeoff (using k-Anonymity)
