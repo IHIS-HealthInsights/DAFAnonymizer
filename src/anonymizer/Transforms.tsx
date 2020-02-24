@@ -4,6 +4,7 @@ import React from "react";
 import * as Matchers from "./Matchers";
 import { FIELD_TYPES, TRANSFORM_TYPES } from "./Types";
 import { ascii_to_hex, hex_to_ascii } from "src/helpers";
+import { FIXED_IV } from "src/constants";
 
 interface ITransform {
   preview: (text: string, args: Record<string, any>) => React.ReactNode;
@@ -70,7 +71,13 @@ const Transforms: Record<string, ITransform> = {
   },
   [TRANSFORM_TYPES.ENCRYPT]: {
     _encrypt: function(text, passphrase) {
-      const e = CryptoJS.AES.encrypt(text, passphrase);
+      // Use passphrase to determistically generate actual key
+      // We will also use a deterministic IV so that each identifer is encrypted
+      // into the same ciphertext.
+      const key256Bits = CryptoJS.PBKDF2(passphrase, FIXED_IV, {
+        keySize: 256 / 32
+      });
+      const e = CryptoJS.AES.encrypt(text, key256Bits, { iv: FIXED_IV });
       return ascii_to_hex(e.toString());
     },
     preview: function(text, args) {
@@ -86,7 +93,10 @@ const Transforms: Record<string, ITransform> = {
     _decrypt: function(ciphertext, passphrase) {
       const plaintext = CryptoJS.AES.decrypt(
         hex_to_ascii(ciphertext),
-        passphrase
+        CryptoJS.PBKDF2(passphrase, FIXED_IV, {
+          keySize: 256 / 32
+        }),
+        { iv: FIXED_IV }
       );
       try {
         return plaintext.toString(CryptoJS.enc.Utf8);
