@@ -3,7 +3,6 @@ import React from "react";
 
 import * as Matchers from "./Matchers";
 import { FIELD_TYPES, TRANSFORM_TYPES } from "./Types";
-import { ascii_to_hex, hex_to_ascii } from "src/helpers";
 import { FIXED_IV } from "src/constants";
 
 interface ITransform {
@@ -79,13 +78,15 @@ const Transforms: Record<string, ITransform> = {
       });
       const e = CryptoJS.AES.encrypt(text, key256Bits, {
         iv: FIXED_IV,
-        mode: CryptoJS.mode.CTR
+        mode: CryptoJS.mode.CBC
       });
-      return ascii_to_hex(e.toString());
+      return e.toString();
     },
     preview: function(text, args) {
       return (
-        <span style={{ fontStyle: "italic", color: "blue" }}>{"*****"}</span>
+        <span style={{ fontStyle: "italic", color: "blue" }}>
+          {this._encrypt(text, args.passphrase)}
+        </span>
       );
     },
     process: function(text, args) {
@@ -95,11 +96,14 @@ const Transforms: Record<string, ITransform> = {
   [TRANSFORM_TYPES.DECRYPT]: {
     _decrypt: function(ciphertext, passphrase) {
       const plaintext = CryptoJS.AES.decrypt(
-        hex_to_ascii(ciphertext),
+        ciphertext,
         CryptoJS.PBKDF2(passphrase, FIXED_IV, {
           keySize: 256 / 32
         }),
-        { iv: FIXED_IV, mode: CryptoJS.mode.CTR }
+        {
+          iv: FIXED_IV,
+          mode: CryptoJS.mode.CBC
+        }
       );
       try {
         return plaintext.toString(CryptoJS.enc.Utf8);
