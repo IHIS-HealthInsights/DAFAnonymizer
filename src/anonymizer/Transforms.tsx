@@ -77,7 +77,10 @@ const Transforms: Record<string, ITransform> = {
       const key256Bits = CryptoJS.PBKDF2(passphrase, FIXED_IV, {
         keySize: 256 / 32
       });
-      const e = CryptoJS.AES.encrypt(text, key256Bits, { iv: FIXED_IV });
+      const e = CryptoJS.AES.encrypt(text, key256Bits, {
+        iv: FIXED_IV,
+        mode: CryptoJS.mode.CTR
+      });
       return ascii_to_hex(e.toString());
     },
     preview: function(text, args) {
@@ -96,7 +99,7 @@ const Transforms: Record<string, ITransform> = {
         CryptoJS.PBKDF2(passphrase, FIXED_IV, {
           keySize: 256 / 32
         }),
-        { iv: FIXED_IV }
+        { iv: FIXED_IV, mode: CryptoJS.mode.CTR }
       );
       try {
         return plaintext.toString(CryptoJS.enc.Utf8);
