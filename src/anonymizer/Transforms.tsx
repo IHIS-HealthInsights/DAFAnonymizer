@@ -1,7 +1,7 @@
 import * as CryptoJS from "crypto-js";
 import React from "react";
 
-import * as Matchers from "./Matchers";
+import { Matcher, NricMatcher, SHIMatcher, TelephoneMatcher } from "./Matchers";
 import { FIELD_TYPES, TRANSFORM_TYPES } from "./Types";
 import { FIXED_IV } from "src/constants";
 
@@ -18,9 +18,15 @@ const Transforms: Record<string, ITransform> = {
   [TRANSFORM_TYPES.NONE]: {
     preview: function(text) {
       // Match and highlight sensitive values
-      const matches = new Matchers.NricMatcher()
-        .match(text)
-        .concat(new Matchers.SHIMatcher().match(text));
+      const matchers: Matcher[] = [
+        new NricMatcher(),
+        new SHIMatcher(),
+        new TelephoneMatcher(),
+      ];
+      let matches = [];
+      for (let m of matchers) {
+        matches = matches.concat(m.match(text));
+      }
 
       if (!matches.length) return text;
       const output = [];

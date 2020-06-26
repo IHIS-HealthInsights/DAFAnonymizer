@@ -43,3 +43,17 @@ export class SHIMatcher implements Matcher {
     return matches;
   }
 }
+
+export class TelephoneMatcher implements Matcher {
+  regex = /\b\d{4}[-.\s]??\d{4}\b/gi;
+  description = "Telephone No";
+
+  match(text) {
+    let matches = [];
+    let m;
+    while ((m = this.regex.exec(text)) !== null) {
+      matches.push({ start: m.index, end: this.regex.lastIndex });
+    }
+    return matches;
+  }
+}

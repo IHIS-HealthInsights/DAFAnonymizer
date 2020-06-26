@@ -3,7 +3,12 @@ import Papa from "papaparse";
 
 // This is required for worker-loader - typescript integration
 import "./custom.d";
-import { NricMatcher, SHIMatcher, Matcher } from "src/anonymizer/Matchers";
+import {
+  NricMatcher,
+  SHIMatcher,
+  TelephoneMatcher,
+  Matcher,
+} from "src/anonymizer/Matchers";
 
 const ctx: Worker = self as any;
 
@@ -37,7 +42,11 @@ ctx.onmessage = event => {
   const groups = {};
   let curCount = 0;
   let matchCounts = {};
-  const matchers: Matcher[] = [new NricMatcher(), new SHIMatcher()];
+  const matchers: Matcher[] = [
+    new NricMatcher(),
+    new SHIMatcher(),
+    new TelephoneMatcher(),
+  ];
   for (let m of matchers) {
     matchCounts[m.description] = {};
   }
