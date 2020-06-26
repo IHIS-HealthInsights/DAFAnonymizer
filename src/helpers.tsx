@@ -1,9 +1,9 @@
 import * as CryptoJS from "crypto-js";
 
-export const generateRandomSalt = bytes =>
+export const generateRandomSalt = (bytes) =>
   CryptoJS.enc.Base64.stringify(CryptoJS.lib.WordArray.random(bytes));
 
-export const ascii_to_hex = str => {
+export const ascii_to_hex = (str) => {
   var arr1 = [];
   for (var n = 0, l = str.length; n < l; n++) {
     var hex = Number(str.charCodeAt(n)).toString(16);
@@ -12,7 +12,7 @@ export const ascii_to_hex = str => {
   return arr1.join("");
 };
 
-export const hex_to_ascii = str1 => {
+export const hex_to_ascii = (str1) => {
   var hex = str1.toString();
   var str = "";
   for (var n = 0; n < hex.length; n += 2) {

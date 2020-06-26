@@ -7,14 +7,14 @@ const KThresholdSelector = ({
   onChange,
   value,
   selectedQuasiIdentifiers,
-  riskAnalysisReportData
+  riskAnalysisReportData,
 }) => {
   const enabled = !!riskAnalysisReportData;
 
   let dropCount = 0;
   if (value !== 0) {
     // 0 = no suppression
-    DEFAULT_KVALUES.forEach(k => {
+    DEFAULT_KVALUES.forEach((k) => {
       if (k <= value) {
         dropCount += riskAnalysisReportData.records[k].length;
       }
@@ -38,7 +38,7 @@ const KThresholdSelector = ({
           <Select.Option key={0} value={0}>
             No Suppression
           </Select.Option>
-          {DEFAULT_KVALUES.map(k => {
+          {DEFAULT_KVALUES.map((k) => {
             if (k > 1) {
               // 1 is an invalid k value
               return (
@@ -58,7 +58,7 @@ const KThresholdSelector = ({
         ) : null}
       </Descriptions.Item>
       <Descriptions.Item label="Quasi Identifiers">
-        {selectedQuasiIdentifiers.map(qi => (
+        {selectedQuasiIdentifiers.map((qi) => (
           <Tag key={qi}>{qi}</Tag>
         ))}
       </Descriptions.Item>

@@ -3,13 +3,13 @@ import React from "react";
 
 const { Dragger } = Upload;
 
-const FileUploader = props => (
+const FileUploader = (props) => (
   <Card bodyStyle={{ padding: 5 }}>
     {props.progress > 0 ? (
       <Progress
         strokeColor={{
           from: "#108ee9",
-          to: "#87d068"
+          to: "#87d068",
         }}
         percent={props.progress}
       />
@@ -29,13 +29,13 @@ const FileUploader = props => (
         <Input
           type="number"
           value={props.previewCount}
-          onChange={e => props.setPreviewCount(e.target.value)}
+          onChange={(e) => props.setPreviewCount(e.target.value)}
         ></Input>
       </Form.Item>
       <Form.Item label="Has header?">
         <Checkbox
           checked={props.hasHeader}
-          onChange={e => props.setHasHeader(e.target.value)}
+          onChange={(e) => props.setHasHeader(e.target.value)}
         ></Checkbox>
       </Form.Item>
     </Form>

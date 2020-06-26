@@ -29,7 +29,7 @@ const SaltMapInput = ({ setSaltMap, saltMap }) => {
         style={{ fontFamily: "monospace", color: isInvalid ? "red" : null }}
         rows={4}
         value={saltString}
-        onChange={e => setSaltString(e.target.value)}
+        onChange={(e) => setSaltString(e.target.value)}
       />
       <Button
         style={{ marginTop: 10 }}

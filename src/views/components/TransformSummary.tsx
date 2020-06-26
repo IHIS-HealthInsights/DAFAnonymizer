@@ -8,28 +8,28 @@ const TransformSummary = ({
   selectedTransforms,
   selectedMode,
   fieldNames,
-  args
+  args,
 }) => {
   const data = [];
   const columns = [
     {
       title: "Field Name",
       dataIndex: "fieldName",
-      render: text => <strong>{text}</strong>
+      render: (text) => <strong>{text}</strong>,
     },
     {
       title: "DAFAA Field Type",
-      dataIndex: "fieldType"
+      dataIndex: "fieldType",
     },
     {
       title: "Transformation To Apply",
-      dataIndex: "transformType"
+      dataIndex: "transformType",
     },
     {
       title: "Args",
       dataIndex: "args",
-      render: text => <span style={{ fontFamily: "monospace" }}>{text}</span>
-    }
+      render: (text) => <span style={{ fontFamily: "monospace" }}>{text}</span>,
+    },
   ];
   for (const field of fieldNames) {
     let fieldOrTransformType =
@@ -42,7 +42,7 @@ const TransformSummary = ({
       ) : (
         <span style={{ fontStyle: "italic", color: "grey" }}>Unspecified</span>
       ),
-      transformType: resolveTransformStr(selectedMode, fieldOrTransformType)
+      transformType: resolveTransformStr(selectedMode, fieldOrTransformType),
     };
 
     // display args for each field, if exist

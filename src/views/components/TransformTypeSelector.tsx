@@ -3,7 +3,7 @@ import { TRANSFORM_TYPES, FIELD_TYPES } from "../../anonymizer/Types";
 import { Select } from "antd";
 const { Option, OptGroup } = Select;
 
-const TransformTypeSelector = props => {
+const TransformTypeSelector = (props) => {
   return (
     <Select
       showSearch
@@ -12,7 +12,7 @@ const TransformTypeSelector = props => {
       value={props.value}
       filterOption={(input, option) => {
         if (typeof option.props.children === "object") {
-          return (option.props.children as any[]).find(n => {
+          return (option.props.children as any[]).find((n) => {
             return n.props.children.indexOf(input.toLowerCase()) >= 0;
           });
         } else if (typeof option.props.children === "string") {
@@ -24,7 +24,7 @@ const TransformTypeSelector = props => {
       }}
     >
       <OptGroup label="DAFAA Field Types">
-        {Object.keys(FIELD_TYPES).map(type => {
+        {Object.keys(FIELD_TYPES).map((type) => {
           return (
             <Option key={type} value={type}>
               {FIELD_TYPES[type].display}
@@ -33,7 +33,7 @@ const TransformTypeSelector = props => {
         })}
       </OptGroup>
       <OptGroup label="Transform Types">
-        {Object.keys(TRANSFORM_TYPES).map(type => {
+        {Object.keys(TRANSFORM_TYPES).map((type) => {
           return (
             <Option key={type} value={type}>
               {TRANSFORM_TYPES[type]}

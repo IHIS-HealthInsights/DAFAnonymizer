@@ -5,13 +5,13 @@ const RiskAnalysisChart = ({ data, setPreviewRiskRecordsK }) => (
   <ResponsiveLine
     data={data}
     xScale={{
-      type: "point"
+      type: "point",
     }}
     yScale={{
       type: "linear",
       stacked: false,
       min: 0,
-      max: 100
+      max: 100,
     }}
     margin={{ top: 10, right: 50, bottom: 50, left: 50 }}
     axisBottom={{
@@ -21,7 +21,7 @@ const RiskAnalysisChart = ({ data, setPreviewRiskRecordsK }) => (
       tickRotation: 0,
       legend: "k-Anonymity value (Risk increases to the right →)",
       legendPosition: "middle",
-      legendOffset: 35
+      legendOffset: 35,
     }}
     axisLeft={{
       orient: "left",
@@ -30,7 +30,7 @@ const RiskAnalysisChart = ({ data, setPreviewRiskRecordsK }) => (
       tickRotation: 0,
       legend: "Utility Loss",
       legendPosition: "middle",
-      legendOffset: -35
+      legendOffset: -35,
     }}
     colors={["red", "orange"]}
     pointSize={10}
@@ -45,15 +45,15 @@ const RiskAnalysisChart = ({ data, setPreviewRiskRecordsK }) => (
     tooltip={({ point }) => {
       // based on k value, search for associated points
       const k = parseInt(point.data.x.toString());
-      const recordLoss = data[0].data.find(o => o.x === k).y;
-      const eqClassLoss = data[1].data.find(o => o.x === k).y;
+      const recordLoss = data[0].data.find((o) => o.x === k).y;
+      const eqClassLoss = data[1].data.find((o) => o.x === k).y;
       return (
         <div
           style={{
             background: "white",
             padding: "9px 12px",
             border: "1px solid #ccc",
-            textAlign: "left"
+            textAlign: "left",
           }}
         >
           <span>{`Removing records with `}</span>
@@ -80,7 +80,7 @@ const RiskAnalysisChart = ({ data, setPreviewRiskRecordsK }) => (
         </div>
       );
     }}
-    onClick={point => {
+    onClick={(point) => {
       if (point) setPreviewRiskRecordsK(parseInt(point.data.x.toString()));
     }}
   />

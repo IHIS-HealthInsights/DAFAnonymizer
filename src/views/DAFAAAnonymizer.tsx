@@ -8,7 +8,7 @@ import {
   Radio,
   Steps,
   Table,
-  Typography
+  Typography,
 } from "antd";
 import Papa from "papaparse";
 import React, { useState } from "react";
@@ -21,7 +21,7 @@ import RiskAnalyzerWorker from "worker-loader!../workers/riskAnalyzer.worker";
 
 import {
   resolveTransform,
-  resolveTransformStr
+  resolveTransformStr,
 } from "../anonymizer/Transforms";
 import FileUploader from "./components/FileUploader";
 import KThresholdSelector from "./components/KThresholdSelector";
@@ -75,7 +75,7 @@ const DAFAAAnonymizer = () => {
   const [riskAnalysisReportData, setRiskAnalysisReportData] = useState();
   const [
     riskAnalysisReportColumnConfig,
-    setRiskAnalysisReportColumnConfig
+    setRiskAnalysisReportColumnConfig,
   ] = useState();
   const [riskAnalysisChartData, setRiskAnalysisChartData] = useState();
   const [anonymizeIsLoading, setAnonymizeIsLoading] = useState(false);
@@ -137,7 +137,7 @@ const DAFAAAnonymizer = () => {
           let previewData = [];
           let readRowsCount = 0;
 
-          return new Promise(resolve => {
+          return new Promise((resolve) => {
             Papa.parse(file, {
               header: hasHeader,
               preview: previewCount,
@@ -155,7 +155,7 @@ const DAFAAAnonymizer = () => {
                 if (!hasHeader) {
                   // Convert 2d array into objects with generated header
                   const numCols = data[0].length;
-                  data = data.map(row => {
+                  data = data.map((row) => {
                     const d = {};
                     for (let i = 0; i < numCols; i++) {
                       d[`Column${i + 1}`] = row[i];
@@ -178,23 +178,23 @@ const DAFAAAnonymizer = () => {
                 // Add incrementing key to each record for table display
                 previewData = previewData.map((d, i) => ({
                   ...d,
-                  key: i
+                  key: i,
                 }));
 
                 setPreviewData(previewData);
                 setCurrentStep(1);
                 if (previewData.length) {
                   setFieldNames(
-                    Object.keys(previewData[0]).filter(key => key !== "key")
+                    Object.keys(previewData[0]).filter((key) => key !== "key")
                   );
                 }
-              }
+              },
             });
           });
-        }
+        },
       };
       return <FileUploader {...fileUploaderProps} progress={fileReadPercent} />;
-    }
+    },
   };
 
   const Step_TagFields: StepDefinition = {
@@ -214,7 +214,7 @@ const DAFAAAnonymizer = () => {
               <br />
               <TransformTypeSelector
                 value={selectedTransforms[key]}
-                onTransformTypeChange={value => {
+                onTransformTypeChange={(value) => {
                   // Set default options based on transformType
                   const transformType = resolveTransformStr(
                     selectedMode,
@@ -226,10 +226,10 @@ const DAFAAAnonymizer = () => {
                       if (!saltMap[key]) {
                         setSaltMap({
                           ...saltMap,
-                          [key]: generateRandomSalt(32)
+                          [key]: generateRandomSalt(32),
                         });
                         argsMap[key] = {
-                          output_len: PSEUDONYMIZE_OUTPUT_LENGTH
+                          output_len: PSEUDONYMIZE_OUTPUT_LENGTH,
                         };
                       }
                       break;
@@ -238,7 +238,7 @@ const DAFAAAnonymizer = () => {
                         "Enter passphrase (required):"
                       );
                       argsMap[key] = {
-                        passphrase: passphrase
+                        passphrase: passphrase,
                       };
                       break;
                     case TRANSFORM_TYPES.DECRYPT:
@@ -246,14 +246,14 @@ const DAFAAAnonymizer = () => {
                         "Enter passphrase (required):"
                       );
                       argsMap[key] = {
-                        passphrase: dpassphrase
+                        passphrase: dpassphrase,
                       };
                       break;
                     case TRANSFORM_TYPES.TRUNCATE_RIGHT:
                       if (value === "ZIPCODE") {
                         // Convert this into generic TRUNCATE transform
                         argsMap[key] = {
-                          num_chars: 3
+                          num_chars: 3,
                         };
                       } else {
                         const fromRight = promptInt(
@@ -261,7 +261,7 @@ const DAFAAAnonymizer = () => {
                           3
                         );
                         argsMap[key] = {
-                          num_chars: fromRight
+                          num_chars: fromRight,
                         };
                       }
                       break;
@@ -271,7 +271,7 @@ const DAFAAAnonymizer = () => {
                         3
                       );
                       argsMap[key] = {
-                        num_chars: fromLeft
+                        num_chars: fromLeft,
                       };
                       break;
                   }
@@ -279,28 +279,28 @@ const DAFAAAnonymizer = () => {
 
                   setSelectedTransforms({
                     ...selectedTransforms,
-                    [key]: value
+                    [key]: value,
                   });
                 }}
               />
             </div>
           ),
           dataIndex: key,
-          render: text => (
+          render: (text) => (
             <div
               style={{
-                width: COLUMN_WIDTH - 20
+                width: COLUMN_WIDTH - 20,
               }}
             >
               {resolveTransform(selectedMode, selectedTransforms[key]).preview(
                 text,
                 {
                   salt: saltMap[key],
-                  ...argsMap[key]
+                  ...argsMap[key],
                 }
               )}
             </div>
-          )
+          ),
         }));
       }
       return (
@@ -312,7 +312,7 @@ const DAFAAAnonymizer = () => {
           size="middle"
         ></Table>
       );
-    }
+    },
   };
 
   const Step_RiskAnalysis: StepDefinition = {
@@ -326,7 +326,7 @@ const DAFAAAnonymizer = () => {
           hasHeader,
           quasiIdentifiers: selectedQuasiIdentifiers,
           previewEnabled,
-          maxPreviewCount: MAX_PREVIEW_COUNT
+          maxPreviewCount: MAX_PREVIEW_COUNT,
         });
         // Listen for completion and progress updates
         riskAnalyzerWorker.onmessage = ({ data }) => {
@@ -354,18 +354,18 @@ const DAFAAAnonymizer = () => {
                 ) : (
                   key.toUpperCase()
                 ),
-              dataIndex: key
+              dataIndex: key,
             }));
             setRiskAnalysisReportColumnConfig(columnConfig_qi);
 
             const chart = [];
             chart.push({
               id: "RecordLoss",
-              data: data.result.recordLoss
+              data: data.result.recordLoss,
             });
             chart.push({
               id: "EqClassLoss",
-              data: data.result.eqClassLoss
+              data: data.result.eqClassLoss,
             });
             setTimeout(() => setRiskAnalysisPercent(100), DEBOUNCE_MS);
             setTimeout(() => {
@@ -384,7 +384,7 @@ const DAFAAAnonymizer = () => {
           previewRiskRecordCount =
             riskAnalysisReportData.records[previewRiskRecordsK].length;
           previewRiskData = riskAnalysisReportData.records[previewRiskRecordsK]
-            .filter(record => !!record.data) // filter out records without preview data, only store up to some amount
+            .filter((record) => !!record.data) // filter out records without preview data, only store up to some amount
             .map((record, i) => {
               const data = record.data;
               data["key"] = i; // to make react happy
@@ -435,7 +435,7 @@ const DAFAAAnonymizer = () => {
                 <Progress
                   strokeColor={{
                     from: "#108ee9",
-                    to: "#87d068"
+                    to: "#87d068",
                   }}
                   percent={riskAnalysisPercent}
                 ></Progress>
@@ -450,11 +450,11 @@ const DAFAAAnonymizer = () => {
               {Object.keys(riskAnalysisReportData.matchCounts).length ? (
                 <Descriptions bordered size="small" column={1}>
                   {Object.keys(riskAnalysisReportData.matchCounts).map(
-                    matchType => (
+                    (matchType) => (
                       <Descriptions.Item label={matchType} key={matchType}>
                         {Object.keys(
                           riskAnalysisReportData.matchCounts[matchType]
-                        ).map(field => {
+                        ).map((field) => {
                           const f =
                             riskAnalysisReportData.matchCounts[matchType][
                               field
@@ -520,7 +520,7 @@ const DAFAAAnonymizer = () => {
           ) : null}
         </Card>
       );
-    }
+    },
   };
 
   const Step_Download: StepDefinition = {
@@ -541,7 +541,7 @@ const DAFAAAnonymizer = () => {
           Object.keys(riskAnalysisReportData.records).forEach((k, i) => {
             if (parseInt(k) <= selectedKThreshold) {
               dropIndexes = dropIndexes.concat(
-                riskAnalysisReportData.records[k].map(record => record.index)
+                riskAnalysisReportData.records[k].map((record) => record.index)
               );
             }
           });
@@ -555,7 +555,7 @@ const DAFAAAnonymizer = () => {
           selectedMode,
           dropIndexes,
           saltMap,
-          argsMap
+          argsMap,
         });
 
         // Download directly to file in chunks, never storing entire file in memory
@@ -581,23 +581,25 @@ const DAFAAAnonymizer = () => {
 
       // Collate args from transformations into a single object
       const transformArgs = argsMap;
-      fieldNames.forEach(field => {
+      fieldNames.forEach((field) => {
         if (saltMap[field]) {
           transformArgs[field] = {
-            ...transformArgs[field]
+            ...transformArgs[field],
           };
           transformArgs[field]["salt"] = saltMap[field];
         }
       });
 
-      const showSaltMapInput = !Object.keys(selectedTransforms).every(field => {
-        return (
-          resolveTransformStr(
-            selectedMode,
-            selectedTransforms[field] || TRANSFORM_TYPES.NONE
-          ) !== TRANSFORM_TYPES.PSEUDONYMIZE
-        );
-      });
+      const showSaltMapInput = !Object.keys(selectedTransforms).every(
+        (field) => {
+          return (
+            resolveTransformStr(
+              selectedMode,
+              selectedTransforms[field] || TRANSFORM_TYPES.NONE
+            ) !== TRANSFORM_TYPES.PSEUDONYMIZE
+          );
+        }
+      );
 
       return (
         <Card>
@@ -652,7 +654,7 @@ const DAFAAAnonymizer = () => {
                   <Progress
                     strokeColor={{
                       from: "#108ee9",
-                      to: "#87d068"
+                      to: "#87d068",
                     }}
                     percent={anonymizePercent}
                   />
@@ -662,14 +664,14 @@ const DAFAAAnonymizer = () => {
           </div>
         </Card>
       );
-    }
+    },
   };
 
   const STEPS: StepDefinition[] = [
     Step_UploadCSV,
     Step_TagFields,
     Step_RiskAnalysis,
-    Step_Download
+    Step_Download,
   ].map((step, i) => {
     step["index"] = i;
     return step;
@@ -692,7 +694,7 @@ const DAFAAAnonymizer = () => {
           key="dafaamode"
           defaultValue="modeB"
           style={{ marginRight: 60 }}
-          onChange={e => setSelectedMode(e.target.value)}
+          onChange={(e) => setSelectedMode(e.target.value)}
         >
           <Radio.Button value="modeA">Mode A</Radio.Button>
           <Radio.Button value="modeB">Mode B</Radio.Button>
@@ -712,7 +714,7 @@ const DAFAAAnonymizer = () => {
           onClick={() => setCurrentStep(currentStep + 1)}
         >
           Next
-        </Button>
+        </Button>,
       ]}
     >
       <Steps
@@ -721,10 +723,10 @@ const DAFAAAnonymizer = () => {
         current={currentStep}
         style={{
           marginBottom: 4,
-          boxShadow: "0px -1px 0 0 #e8e8e8 inset"
+          boxShadow: "0px -1px 0 0 #e8e8e8 inset",
         }}
       >
-        {STEPS.map(step => (
+        {STEPS.map((step) => (
           <Step
             key={step.index}
             status={getStepStatus(step.index, currentStep)}

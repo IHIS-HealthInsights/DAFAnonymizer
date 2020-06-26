@@ -28,7 +28,7 @@ export class SHIMatcher implements Matcher {
     // Case Insensitive
     /\b(Abuse|Addiction|Alcoholic|Alcoholism|Amphetamine|Cannabis|Chancre|Chancroid|Chlamyd|Cocaine|Dependence|Ducreyi|Ecstasy|Gonococc|Gonor|Heroin|HIV|Marijuana|Opium|Pallid|Reagin|Retroviral|Spiroch|Sterilisation|Sterilization|Syphilis|Treponema|Trichomon|Urealyticum|Ureaplasma|Venereal|Withdraw|Tetraplex)\b/gi,
     // Multiple words
-    /\b(C Trach|M genital|M hominis|N Gonor|Genital herpes|Herpes genital|Infect genital|Genital infect|Human immun|Sexual transmit|Transmit sexual|Herpes simple)\b/gi
+    /\b(C Trach|M genital|M hominis|N Gonor|Genital herpes|Herpes genital|Infect genital|Genital infect|Human immun|Sexual transmit|Transmit sexual|Herpes simple)\b/gi,
   ];
 
   description = "Sensitive Health Information";

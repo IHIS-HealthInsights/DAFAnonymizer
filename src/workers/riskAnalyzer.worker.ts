@@ -30,13 +30,13 @@ function extractEqClasses(o: object, eqClasses: (object[] | number)[]) {
   }
 }
 
-ctx.onmessage = event => {
+ctx.onmessage = (event) => {
   const {
     file,
     hasHeader,
     quasiIdentifiers,
     previewEnabled,
-    maxPreviewCount
+    maxPreviewCount,
   } = event.data;
 
   const groups = {};
@@ -62,7 +62,7 @@ ctx.onmessage = event => {
       if (!hasHeader) {
         // Convert 2d array into objects with generated header
         const numCols = data[0].length;
-        data = data.map(row => {
+        data = data.map((row) => {
           const d = {};
           for (let i = 0; i < numCols; i++) {
             d[`Column${i + 1}`] = row[i];
@@ -84,7 +84,7 @@ ctx.onmessage = event => {
               if (!matchCounts[matcher.description][key]) {
                 matchCounts[matcher.description][key] = {
                   count: 0,
-                  examples: []
+                  examples: [],
                 };
               }
               matchCounts[matcher.description][key].count += count;
@@ -141,7 +141,7 @@ ctx.onmessage = event => {
 
       ctx.postMessage({
         type: "PROGRESS",
-        progress: Math.round((meta.cursor / file.size) * 100)
+        progress: Math.round((meta.cursor / file.size) * 100),
       });
     },
 
@@ -152,7 +152,7 @@ ctx.onmessage = event => {
       const recordLoss = [];
       const eqClassLoss = [];
       const records: Record<number, Record<string, any>> = {};
-      DEFAULT_KVALUES.forEach(k => {
+      DEFAULT_KVALUES.forEach((k) => {
         records[k] = [];
         let recordCount = 0;
         let classCount = 0;
@@ -165,7 +165,7 @@ ctx.onmessage = event => {
             // only store up to maxPreviewCount samples, delete data field afterwards
             if (length === k) {
               if (records[k].length > maxPreviewCount) {
-                c = c.map(record => {
+                c = c.map((record) => {
                   record.data = null;
                   return record;
                 });
@@ -176,11 +176,11 @@ ctx.onmessage = event => {
         }
         recordLoss.push({
           x: k,
-          y: (recordCount / curCount) * 100
+          y: (recordCount / curCount) * 100,
         });
         eqClassLoss.push({
           x: k,
-          y: (classCount / eqClasses.length) * 100
+          y: (classCount / eqClasses.length) * 100,
         });
       });
 
@@ -195,9 +195,9 @@ ctx.onmessage = event => {
           recordLoss,
           eqClassLoss,
           records,
-          totalRecordCount: curCount
-        }
+          totalRecordCount: curCount,
+        },
       });
-    }
+    },
   });
 };

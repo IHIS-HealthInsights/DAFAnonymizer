@@ -16,7 +16,7 @@ interface ITransform {
 
 const Transforms: Record<string, ITransform> = {
   [TRANSFORM_TYPES.NONE]: {
-    preview: function(text) {
+    preview: function (text) {
       // Match and highlight sensitive values
       const matchers: Matcher[] = [
         new NricMatcher(),
@@ -52,15 +52,15 @@ const Transforms: Record<string, ITransform> = {
       );
       return output;
     },
-    process: function(text) {
+    process: function (text) {
       return text;
-    }
+    },
   },
   [TRANSFORM_TYPES.PSEUDONYMIZE]: {
-    _hash: function(text) {
+    _hash: function (text) {
       return CryptoJS.SHA256(text).toString();
     },
-    preview: function(text, args) {
+    preview: function (text, args) {
       return (
         <span style={{ fontStyle: "italic", color: "blue" }}>
           {`${this._hash(text + args.salt || "").substring(
@@ -70,45 +70,45 @@ const Transforms: Record<string, ITransform> = {
         </span>
       );
     },
-    process: function(text, args) {
+    process: function (text, args) {
       return this._hash(text + args.salt || "").substring(0, args.output_len);
-    }
+    },
   },
   [TRANSFORM_TYPES.ENCRYPT]: {
-    _encrypt: function(text, passphrase) {
+    _encrypt: function (text, passphrase) {
       // Use passphrase to determistically generate actual key
       // We will also use a deterministic IV so that each identifer is encrypted
       // into the same ciphertext.
       const key256Bits = CryptoJS.PBKDF2(passphrase, FIXED_IV, {
-        keySize: 256 / 32
+        keySize: 256 / 32,
       });
       const e = CryptoJS.AES.encrypt(text, key256Bits, {
         iv: FIXED_IV,
-        mode: CryptoJS.mode.CBC
+        mode: CryptoJS.mode.CBC,
       });
       return e.toString();
     },
-    preview: function(text, args) {
+    preview: function (text, args) {
       return (
         <span style={{ fontStyle: "italic", color: "blue" }}>
           {this._encrypt(text, args.passphrase)}
         </span>
       );
     },
-    process: function(text, args) {
+    process: function (text, args) {
       return this._encrypt(text, args.passphrase);
-    }
+    },
   },
   [TRANSFORM_TYPES.DECRYPT]: {
-    _decrypt: function(ciphertext, passphrase) {
+    _decrypt: function (ciphertext, passphrase) {
       const plaintext = CryptoJS.AES.decrypt(
         ciphertext,
         CryptoJS.PBKDF2(passphrase, FIXED_IV, {
-          keySize: 256 / 32
+          keySize: 256 / 32,
         }),
         {
           iv: FIXED_IV,
-          mode: CryptoJS.mode.CBC
+          mode: CryptoJS.mode.CBC,
         }
       );
       try {
@@ -117,31 +117,31 @@ const Transforms: Record<string, ITransform> = {
         return "Malformed String - Passphrase is likely incorrect";
       }
     },
-    preview: function(text, args) {
+    preview: function (text, args) {
       return (
         <span style={{ fontStyle: "italic", color: "blue" }}>
           {this._decrypt(text, args.passphrase)}
         </span>
       );
     },
-    process: function(text, args) {
+    process: function (text, args) {
       return this._decrypt(text, args.passphrase);
-    }
+    },
   },
   [TRANSFORM_TYPES.REMOVE]: {
-    preview: function(text) {
+    preview: function (text) {
       return (
         <span style={{ textDecoration: "line-through", color: "grey" }}>
           {text}
         </span>
       );
     },
-    process: function() {
+    process: function () {
       return null;
-    }
+    },
   },
   [TRANSFORM_TYPES.TRUNCATE_RIGHT]: {
-    preview: function(text, args) {
+    preview: function (text, args) {
       return (
         <div>
           <span>{text.substring(0, text.length - args.num_chars)}</span>{" "}
@@ -151,12 +151,12 @@ const Transforms: Record<string, ITransform> = {
         </div>
       );
     },
-    process: function(text, args) {
+    process: function (text, args) {
       return text.substring(0, text.length - args.num_chars);
-    }
+    },
   },
   [TRANSFORM_TYPES.TRUNCATE_LEFT]: {
-    preview: function(text, args) {
+    preview: function (text, args) {
       return (
         <div>
           <span style={{ textDecoration: "line-through", color: "grey" }}>
@@ -166,10 +166,10 @@ const Transforms: Record<string, ITransform> = {
         </div>
       );
     },
-    process: function(text, args) {
+    process: function (text, args) {
       return text.substring(args.num_chars, text.length);
-    }
-  }
+    },
+  },
 };
 
 export const resolveTransformStr = (
