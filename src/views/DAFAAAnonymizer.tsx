@@ -590,6 +590,33 @@ const DAFAAAnonymizer = () => {
         }
       });
 
+      const onPolicyDownload = () => {
+        // Generate anonymisation policy file for user-config
+        // 1. Include a listing of all column names
+        const columnNames = fieldNames;
+
+        // 1. Further merge selected transform for each field and args into a single object
+        const transforms = {};
+        for (let t in selectedTransforms) {
+          transforms[t] = {
+            type: resolveTransformStr(selectedMode, selectedTransforms[t]),
+            args: transformArgs[t],
+          };
+        }
+
+        const policy = { columnNames, transforms };
+
+        // Download policy as a JSON file
+        const downloadStream = streamSaver.createWriteStream(
+          "anon_policy.json"
+        );
+        new Response(JSON.stringify(policy)).body
+          .pipeTo(downloadStream)
+          .then(null, (err) => {
+            alert(`Unable to complete download: ${err}`);
+          });
+      };
+
       const showSaltMapInput = !Object.keys(selectedTransforms).every(
         (field) => {
           return (
@@ -643,6 +670,15 @@ const DAFAAAnonymizer = () => {
                 Anonymize and Download
               </Button>
             </div>
+            <Button
+              size="large"
+              type="dashed"
+              icon="file"
+              onClick={onPolicyDownload}
+              disabled={!userFile}
+            >
+              Download Anonymisation Policy
+            </Button>
             {anonymizePercent > 0 ? (
               <Descriptions
                 column={1}
