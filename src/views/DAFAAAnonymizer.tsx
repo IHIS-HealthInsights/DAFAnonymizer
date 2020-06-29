@@ -610,7 +610,7 @@ const DAFAAAnonymizer = () => {
         const downloadStream = streamSaver.createWriteStream(
           "anon_policy.json"
         );
-        new Response(JSON.stringify(policy)).body
+        new Response(JSON.stringify(policy, null, 2)).body
           .pipeTo(downloadStream)
           .then(null, (err) => {
             alert(`Unable to complete download: ${err}`);
