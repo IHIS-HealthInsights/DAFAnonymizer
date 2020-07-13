@@ -1,15 +1,5 @@
 import { useDebounce } from "@react-hook/debounce";
-import {
-  Button,
-  Card,
-  Descriptions,
-  PageHeader,
-  Progress,
-  Radio,
-  Steps,
-  Table,
-  Typography,
-} from "antd";
+import { Button, Card, Descriptions, PageHeader, Progress, Radio, Steps, Table, Typography } from "antd";
 import Papa from "papaparse";
 import React, { useState } from "react";
 import { TRANSFORM_TYPES } from "src/anonymizer/Types";
@@ -19,10 +9,7 @@ import streamSaver from "streamsaver";
 import AnonymizerWorker from "worker-loader!../workers/anonymizer.worker";
 import RiskAnalyzerWorker from "worker-loader!../workers/riskAnalyzer.worker";
 
-import {
-  resolveTransform,
-  resolveTransformStr,
-} from "../anonymizer/Transforms";
+import { resolveTransform, resolveTransformStr } from "../anonymizer/Transforms";
 import FileUploader from "./components/FileUploader";
 import KThresholdSelector from "./components/KThresholdSelector";
 import QISelector from "./components/QISelector";
@@ -49,7 +36,7 @@ const DAFAAAnonymizer = () => {
   const MAX_PREVIEW_COUNT = 50;
   const PSEUDONYMIZE_OUTPUT_LENGTH = 10;
 
-  const [userFile, setUserFile] = useState();
+  const [userFile, setUserFile] = useState(null);
   const [fileReadPercent, setFileReadPercent] = useDebounce(
     0,
     DEBOUNCE_MS,
@@ -72,15 +59,15 @@ const DAFAAAnonymizer = () => {
     DEBOUNCE_MS,
     true
   );
-  const [riskAnalysisReportData, setRiskAnalysisReportData] = useState();
+  const [riskAnalysisReportData, setRiskAnalysisReportData] = useState(null);
   const [
     riskAnalysisReportColumnConfig,
     setRiskAnalysisReportColumnConfig,
-  ] = useState();
-  const [riskAnalysisChartData, setRiskAnalysisChartData] = useState();
+  ] = useState<any>();
+  const [riskAnalysisChartData, setRiskAnalysisChartData] = useState(null);
   const [anonymizeIsLoading, setAnonymizeIsLoading] = useState(false);
   const [riskAnalysisIsLoading, setRiskAnalysisIsLoading] = useState(false);
-  const [previewRiskRecordsK, setPreviewRiskRecordsK] = useState();
+  const [previewRiskRecordsK, setPreviewRiskRecordsK] = useState(100);
   const [fieldNames, setFieldNames] = useState([]);
   const [selectedKThreshold, setSelectedKThreshold] = useState(0);
   const [previewEnabled, setPreviewEnabled] = useState(false);
@@ -96,14 +83,14 @@ const DAFAAAnonymizer = () => {
     setSelectedQuasiIdentifiers([]);
     setAnonymizePercent(0);
     setRiskAnalysisPercent(0);
-    setRiskAnalysisReportData(undefined);
-    setRiskAnalysisChartData(undefined);
-    setRiskAnalysisReportColumnConfig(undefined);
+    setRiskAnalysisReportData(null);
+    setRiskAnalysisChartData(null);
+    setRiskAnalysisReportColumnConfig(null);
     setAnonymizeIsLoading(false);
     setRiskAnalysisIsLoading(false);
-    setPreviewRiskRecordsK(undefined);
+    setPreviewRiskRecordsK(null);
     setSelectedKThreshold(0);
-    setPreviewRiskRecordsK(undefined);
+    setPreviewRiskRecordsK(100);
     setFieldNames([]);
     setPreviewEnabled(false);
     setSaltMap({});
