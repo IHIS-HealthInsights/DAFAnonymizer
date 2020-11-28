@@ -1,5 +1,15 @@
 import { useDebounce } from "@react-hook/debounce";
-import { Button, Card, Descriptions, PageHeader, Progress, Radio, Steps, Table, Typography } from "antd";
+import {
+  Button,
+  Card,
+  Descriptions,
+  PageHeader,
+  Progress,
+  Radio,
+  Steps,
+  Table,
+  Typography,
+} from "antd";
 import Papa from "papaparse";
 import React, { useState } from "react";
 import { TRANSFORM_TYPES } from "src/anonymizer/Types";
@@ -9,7 +19,10 @@ import streamSaver from "streamsaver";
 import AnonymizerWorker from "worker-loader!../workers/anonymizer.worker";
 import RiskAnalyzerWorker from "worker-loader!../workers/riskAnalyzer.worker";
 
-import { resolveTransform, resolveTransformStr } from "../anonymizer/Transforms";
+import {
+  resolveTransform,
+  resolveTransformStr,
+} from "../anonymizer/Transforms";
 import FileUploader from "./components/FileUploader";
 import KThresholdSelector from "./components/KThresholdSelector";
 import QISelector from "./components/QISelector";
@@ -136,9 +149,24 @@ const DAFAAAnonymizer = () => {
                 }
                 if (errors.length) {
                   console.error(errors);
-                  alert("Failed to parse CSV file");
+                  alert(
+                    `Failed to parse CSV file\nError: ${errors[0].message}`
+                  );
                   return;
                 }
+
+                if (readRowsCount === 0 && hasHeader) {
+                  // Ensure that all header fields are non-empty
+                  for (let k of Object.keys(data[0])) {
+                    if (k.length === 0) {
+                      alert(
+                        "Failed to parse CSV file\nError: CSV headers cannot be empty"
+                      );
+                      return;
+                    }
+                  }
+                }
+
                 if (!hasHeader) {
                   // Convert 2d array into objects with generated header
                   const numCols = data[0].length;
@@ -154,6 +182,7 @@ const DAFAAAnonymizer = () => {
                   Math.round((readRowsCount / previewCount) * 100)
                 );
                 previewData = previewData.concat(data);
+                readRowsCount += data.length;
               },
               complete: () => {
                 // Reset in case there was a previous upload
