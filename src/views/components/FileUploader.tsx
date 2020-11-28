@@ -35,7 +35,7 @@ const FileUploader = (props) => (
       <Form.Item label="Has header?">
         <Checkbox
           checked={props.hasHeader}
-          onChange={(e) => props.setHasHeader(e.target.value)}
+          onChange={(e) => props.setHasHeader(e.target.checked)}
         ></Checkbox>
       </Form.Item>
     </Form>
