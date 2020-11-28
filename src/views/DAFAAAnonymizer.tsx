@@ -120,7 +120,7 @@ const DAFAAAnonymizer = () => {
   }
 
   const Step_UploadCSV: StepDefinition = {
-    title: "Upload CSV",
+    title: "Load CSV",
     content: () => {
       const fileUploaderProps = {
         accept: ".csv",
@@ -738,7 +738,7 @@ const DAFAAAnonymizer = () => {
   return (
     <PageHeader
       ghost={false}
-      title="DAFAA Anonymizer"
+      title="DAFAA De-identification Tool"
       subTitle=""
       extra={[
         <strong key="dafaalabel">DAFAA Mode</strong>,

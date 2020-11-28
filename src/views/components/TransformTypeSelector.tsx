@@ -7,7 +7,7 @@ const TransformTypeSelector = (props) => {
   return (
     <Select
       showSearch
-      placeholder="Tag Fields"
+      placeholder="Tag Field"
       onChange={props.onTransformTypeChange}
       value={props.value}
       filterOption={(input, option) => {
