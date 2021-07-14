@@ -61,7 +61,7 @@ ctx.onmessage = (event) => {
       }
       if (!hasHeader) {
         // Convert 2d array into objects with generated header
-        const numCols = data[0].length;
+        const numCols = (data[0] as [any]).length;
         data = data.map((row) => {
           const d = {};
           for (let i = 0; i < numCols; i++) {
@@ -73,7 +73,7 @@ ctx.onmessage = (event) => {
 
       for (let chunkIndex = 0; chunkIndex < data.length; chunkIndex++) {
         const rowIndex = curCount + chunkIndex;
-        const row = data[chunkIndex];
+        const row: any = data[chunkIndex];
 
         // 1. Scan for PII and SHI
         for (let key in row) {

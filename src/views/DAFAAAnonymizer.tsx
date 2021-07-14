@@ -5,7 +5,6 @@ import {
   Descriptions,
   PageHeader,
   Progress,
-  Radio,
   Steps,
   Table,
   Typography,
@@ -13,7 +12,7 @@ import {
 import Papa from "papaparse";
 import React, { useState } from "react";
 import { TRANSFORM_TYPES } from "src/anonymizer/Types";
-import { generateRandomSalt, promptInt, promptString } from "src/helpers";
+import { promptInt, promptString } from "src/helpers";
 import streamSaver from "streamsaver";
 /* eslint import/no-webpack-loader-syntax: off */
 import AnonymizerWorker from "worker-loader!../workers/anonymizer.worker";
@@ -47,7 +46,7 @@ const DAFAAAnonymizer = () => {
   const MAX_SIZE_FOR_PREVIEW_MB = 50;
   const MAX_SIZE_FOR_PREVIEW = MAX_SIZE_FOR_PREVIEW_MB * 1024 * 1024; //MB
   const MAX_PREVIEW_COUNT = 50;
-  const PSEUDONYMIZE_OUTPUT_LENGTH = 10;
+  const DEIDENTIFY_OUTPUT_LENGTH = undefined;
 
   const [userFile, setUserFile] = useState(null);
   const [fileReadPercent, setFileReadPercent] = useDebounce(
@@ -65,7 +64,7 @@ const DAFAAAnonymizer = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [previewCount, setPreviewCount] = useState(100);
   const [hasHeader, setHasHeader] = useState(true);
-  const [selectedMode, setSelectedMode] = useState("modeB");
+  const selectedMode = "modeB";
   const [selectedQuasiIdentifiers, setSelectedQuasiIdentifiers] = useState([]);
   const [riskAnalysisPercent, setRiskAnalysisPercent] = useDebounce(
     0,
@@ -73,10 +72,8 @@ const DAFAAAnonymizer = () => {
     true
   );
   const [riskAnalysisReportData, setRiskAnalysisReportData] = useState(null);
-  const [
-    riskAnalysisReportColumnConfig,
-    setRiskAnalysisReportColumnConfig,
-  ] = useState<any>();
+  const [riskAnalysisReportColumnConfig, setRiskAnalysisReportColumnConfig] =
+    useState<any>();
   const [riskAnalysisChartData, setRiskAnalysisChartData] = useState(null);
   const [anonymizeIsLoading, setAnonymizeIsLoading] = useState(false);
   const [riskAnalysisIsLoading, setRiskAnalysisIsLoading] = useState(false);
@@ -142,9 +139,18 @@ const DAFAAAnonymizer = () => {
               header: hasHeader,
               preview: previewCount,
               skipEmptyLines: true,
-              chunk: ({ data, errors, meta }) => {
+              chunk: ({ data, errors, meta }, parser) => {
+                // When multiple headers exist with the same name, papaparse will only
+                // read the last column. Therefore, we will check first to ensure
+                // that there are no duplicated column names.
+                if (new Set(meta.fields).size !== meta.fields.length) {
+                  alert("Failed to parse CSV file: Duplicate header names");
+                  parser.abort();
+                }
+
                 if (!data.length) {
                   alert("CSV file is empty");
+                  parser.abort();
                   return;
                 }
                 if (errors.length) {
@@ -152,6 +158,7 @@ const DAFAAAnonymizer = () => {
                   alert(
                     `Failed to parse CSV file\nError: ${errors[0].message}`
                   );
+                  parser.abort();
                   return;
                 }
 
@@ -162,6 +169,7 @@ const DAFAAAnonymizer = () => {
                       alert(
                         "Failed to parse CSV file\nError: CSV headers cannot be empty"
                       );
+                      parser.abort();
                       return;
                     }
                   }
@@ -169,7 +177,7 @@ const DAFAAAnonymizer = () => {
 
                 if (!hasHeader) {
                   // Convert 2d array into objects with generated header
-                  const numCols = data[0].length;
+                  const numCols = (data[0] as [any]).length;
                   data = data.map((row) => {
                     const d = {};
                     for (let i = 0; i < numCols; i++) {
@@ -187,6 +195,11 @@ const DAFAAAnonymizer = () => {
               complete: () => {
                 // Reset in case there was a previous upload
                 reset();
+
+                if (!previewData.length) {
+                  // complete is still called when parse has been aborted
+                  return;
+                }
 
                 setFileReadPercent(100);
                 setPreviewEnabled(file.size <= MAX_SIZE_FOR_PREVIEW);
@@ -231,21 +244,33 @@ const DAFAAAnonymizer = () => {
               <TransformTypeSelector
                 value={selectedTransforms[key]}
                 onTransformTypeChange={(value) => {
+                  // Reset saltMap and argsMap
+                  setSaltMap({
+                    ...saltMap,
+                    [key]: undefined,
+                  });
+                  argsMap[key] = undefined;
+
                   // Set default options based on transformType
                   const transformType = resolveTransformStr(
                     selectedMode,
                     value
                   );
                   switch (transformType) {
-                    case TRANSFORM_TYPES.PSEUDONYMIZE:
+                    case TRANSFORM_TYPES.NONE:
+                      break;
+                    case TRANSFORM_TYPES.REMOVE:
+                      break;
+                    case TRANSFORM_TYPES.DEIDENTIFY:
                       // Generate a random salt if it does not already exist
                       if (!saltMap[key]) {
                         setSaltMap({
                           ...saltMap,
-                          [key]: generateRandomSalt(32),
+                          [key]: "",
                         });
+
                         argsMap[key] = {
-                          output_len: PSEUDONYMIZE_OUTPUT_LENGTH,
+                          output_len: DEIDENTIFY_OUTPUT_LENGTH,
                         };
                       }
                       break;
@@ -332,7 +357,7 @@ const DAFAAAnonymizer = () => {
   };
 
   const Step_RiskAnalysis: StepDefinition = {
-    title: "Risk Analysis",
+    title: "Optional Checks",
     content: () => {
       const onGenerateRiskReport = () => {
         setRiskAnalysisIsLoading(true);
@@ -414,19 +439,27 @@ const DAFAAAnonymizer = () => {
           <Title level={4} style={{ textAlign: "left" }}>
             Run Risk Analysis on Full Dataset
           </Title>
-          <div style={{ textAlign: "left" }}>
-            <strong>
-              1. Run full-text scan for PII/SHI <br />
-              2. Select Quasi Identifiers to analyze Re-idenfication Risk
-            </strong>
-          </div>
-          <div style={{ display: "flex" }}>
+          <Steps direction="vertical" style={{ textAlign: "left" }}>
+            <Step
+              status="process"
+              title="Run full-text scan for PII/SHI"
+              description="Helps to flag out potential identifiers in the raw data"
+            />
+            <Step
+              status="process"
+              title="Analyze Re-idenfication Risk (k-Anonymity Metric)"
+              description="Pick fields as quasi-identifiers for this analysis"
+            />
+          </Steps>
+
+          <div style={{ display: "flex", marginLeft: 46 }}>
             <QISelector
               fieldNames={fieldNames}
               selectedQuasiIdentifiers={selectedQuasiIdentifiers}
               setSelectedQuasiIdentifiers={setSelectedQuasiIdentifiers}
             />
           </div>
+          <br />
           <div style={{ textAlign: "left", marginTop: 10 }}>
             <Button
               size="large"
@@ -462,7 +495,7 @@ const DAFAAAnonymizer = () => {
           riskAnalysisReportData &&
           riskAnalysisReportData.matchCounts ? (
             <div style={{ textAlign: "left", marginBottom: 20 }}>
-              <Title level={4}>1. Full text scan results</Title>
+              <Title level={4}>Full text scan results</Title>
               {Object.keys(riskAnalysisReportData.matchCounts).length ? (
                 <Descriptions bordered size="small" column={1}>
                   {Object.keys(riskAnalysisReportData.matchCounts).map(
@@ -470,22 +503,26 @@ const DAFAAAnonymizer = () => {
                       <Descriptions.Item label={matchType} key={matchType}>
                         {Object.keys(
                           riskAnalysisReportData.matchCounts[matchType]
-                        ).map((field) => {
-                          const f =
-                            riskAnalysisReportData.matchCounts[matchType][
-                              field
-                            ];
-                          let s = `${field}: ${f.count} matches`;
-                          if (f.count > 0) {
-                            s += ` (${f.examples})`;
-                          }
+                        ).length > 0
+                          ? Object.keys(
+                              riskAnalysisReportData.matchCounts[matchType]
+                            ).map((field) => {
+                              const f =
+                                riskAnalysisReportData.matchCounts[matchType][
+                                  field
+                                ];
+                              let s = `${field}: ${f.count} matches`;
+                              if (f.count > 0) {
+                                s += ` (${f.examples})`;
+                              }
 
-                          return (
-                            <div key={field}>
-                              <code>{s}</code>
-                            </div>
-                          );
-                        })}
+                              return (
+                                <div key={field}>
+                                  <code>{s}</code>
+                                </div>
+                              );
+                            })
+                          : "No matches found"}
                       </Descriptions.Item>
                     )
                   )}
@@ -498,7 +535,7 @@ const DAFAAAnonymizer = () => {
           {selectedQuasiIdentifiers.length > 0 && riskAnalysisChartData ? (
             <div style={{ height: 300, marginBottom: 70 }}>
               <Title level={4} style={{ textAlign: "left" }}>
-                2. Risk vs Utility Tradeoff (using k-Anonymity)
+                Risk vs Utility Tradeoff (using k-Anonymity)
               </Title>
               <RiskAnalysisChart
                 data={riskAnalysisChartData}
@@ -506,13 +543,15 @@ const DAFAAAnonymizer = () => {
               />
             </div>
           ) : null}
-          {riskAnalysisReportData && previewRiskRecordsK ? (
+          {selectedQuasiIdentifiers.length > 0 &&
+          riskAnalysisReportData &&
+          previewRiskRecordsK ? (
             previewEnabled ? (
               <div>
                 <Title
                   level={4}
                   style={{ textAlign: "left" }}
-                >{`3. Preview records with k=${previewRiskRecordsK} (${(
+                >{`Preview records with k=${previewRiskRecordsK} (${(
                   (1 / previewRiskRecordsK) *
                   100
                 ).toFixed(
@@ -540,9 +579,18 @@ const DAFAAAnonymizer = () => {
   };
 
   const Step_Download: StepDefinition = {
-    title: "Anonymize",
+    title: "De-identify",
     content: () => {
       const onAnonymizeDownload = () => {
+        // Validate that salts are provided
+        for (const col in selectedTransforms) {
+          if (selectedTransforms[col] !== "IDENTIFIER") continue;
+          if (saltMap[col] === undefined || saltMap[col].length === 0) {
+            window.alert(`Salt has not been specified for column: ${col}`);
+            return;
+          }
+        }
+
         setAnonymizeIsLoading(true);
         setAnonymizePercent(0);
 
@@ -576,7 +624,7 @@ const DAFAAAnonymizer = () => {
 
         // Download directly to file in chunks, never storing entire file in memory
         const downloadStream = streamSaver.createWriteStream(
-          `anonymized_${userFile.name}`
+          `deidentified_${userFile.name}`
         );
         const writer = downloadStream.getWriter();
 
@@ -591,6 +639,13 @@ const DAFAAAnonymizer = () => {
             setTimeout(() => setAnonymizePercent(100), DEBOUNCE_MS);
             setAnonymizeIsLoading(false);
             writer.close();
+          } else if (data.type === "ERROR") {
+            setAnonymizePercent(0);
+            setAnonymizeIsLoading(false);
+            console.error(data.errors);
+            window.alert(
+              `Error parsing CSV file: ${JSON.stringify(data.errors[0])}`
+            );
           }
         };
       };
@@ -598,7 +653,7 @@ const DAFAAAnonymizer = () => {
       // Collate args from transformations into a single object
       const transformArgs = argsMap;
       fieldNames.forEach((field) => {
-        if (saltMap[field]) {
+        if (saltMap[field] !== undefined) {
           transformArgs[field] = {
             ...transformArgs[field],
           };
@@ -624,7 +679,7 @@ const DAFAAAnonymizer = () => {
 
         // Download policy as a JSON file
         const downloadStream = streamSaver.createWriteStream(
-          "anon_policy.json"
+          "deidentification_policy.json"
         );
         new Response(JSON.stringify(policy, null, 2)).body
           .pipeTo(downloadStream)
@@ -639,7 +694,7 @@ const DAFAAAnonymizer = () => {
             resolveTransformStr(
               selectedMode,
               selectedTransforms[field] || TRANSFORM_TYPES.NONE
-            ) !== TRANSFORM_TYPES.PSEUDONYMIZE
+            ) !== TRANSFORM_TYPES.DEIDENTIFY
           );
         }
       );
@@ -649,28 +704,33 @@ const DAFAAAnonymizer = () => {
           <Title level={4} style={{ textAlign: "left" }}>
             1. Field-Level Transformations
           </Title>
+
+          {/* Hide custom salt input if DEIDENTIFY not selected */}
+          {showSaltMapInput ? (
+            <SaltMapInput setSaltMap={setSaltMap} saltMap={saltMap} />
+          ) : null}
+          <br />
           <TransformSummary
             fieldNames={fieldNames}
             selectedTransforms={selectedTransforms}
             selectedMode={selectedMode}
             args={transformArgs}
           />
-          <br />
-          {/* Hide custom salt input if PSEUDONYMIZE not selected */}
-          {showSaltMapInput ? (
-            <SaltMapInput setSaltMap={setSaltMap} saltMap={saltMap} />
-          ) : null}
 
-          <br />
-          <Title level={4} style={{ textAlign: "left" }}>
-            2. Record-Level Suppression (using k-Anonymity)
-          </Title>
-          <KThresholdSelector
-            onChange={setSelectedKThreshold}
-            value={selectedKThreshold}
-            riskAnalysisReportData={riskAnalysisReportData}
-            selectedQuasiIdentifiers={selectedQuasiIdentifiers}
-          />
+          {selectedQuasiIdentifiers.length > 0 ? (
+            <div>
+              <br />
+              <Title level={4} style={{ textAlign: "left" }}>
+                2. Record-Level Suppression (using k-Anonymity)
+              </Title>
+              <KThresholdSelector
+                onChange={setSelectedKThreshold}
+                value={selectedKThreshold}
+                riskAnalysisReportData={riskAnalysisReportData}
+                selectedQuasiIdentifiers={selectedQuasiIdentifiers}
+              />
+            </div>
+          ) : null}
 
           <br />
           <div style={{ display: "flex" }}>
@@ -683,7 +743,7 @@ const DAFAAAnonymizer = () => {
                 loading={anonymizeIsLoading}
                 disabled={!userFile}
               >
-                Anonymize and Download
+                De-Identify and Download
               </Button>
             </div>
             <Button
@@ -693,7 +753,7 @@ const DAFAAAnonymizer = () => {
               onClick={onPolicyDownload}
               disabled={!userFile}
             >
-              Download Anonymisation Policy
+              Download De-Identification Policy
             </Button>
             {anonymizePercent > 0 ? (
               <Descriptions
@@ -702,7 +762,7 @@ const DAFAAAnonymizer = () => {
                 size="small"
                 style={{ width: "100%", marginLeft: 20 }}
               >
-                <Descriptions.Item label="Anonymization Progress">
+                <Descriptions.Item label="Job Progress">
                   <Progress
                     strokeColor={{
                       from: "#108ee9",
@@ -738,20 +798,18 @@ const DAFAAAnonymizer = () => {
   return (
     <PageHeader
       ghost={false}
-      title="DAFAA De-identification Tool"
+      title={
+        <span>
+          <img
+            alt="TRUST Logo"
+            src="/logo.png"
+            style={{ height: 30, marginRight: 15 }}
+          ></img>
+          TRUST De-Identification Tool
+        </span>
+      }
       subTitle=""
       extra={[
-        <strong key="dafaalabel">DAFAA Mode</strong>,
-        <Radio.Group
-          key="dafaamode"
-          defaultValue="modeB"
-          style={{ marginRight: 60 }}
-          onChange={(e) => setSelectedMode(e.target.value)}
-        >
-          <Radio.Button value="modeA">Mode A</Radio.Button>
-          <Radio.Button value="modeB">Mode B</Radio.Button>
-        </Radio.Group>,
-
         <Button
           key="prev"
           disabled={currentStep === 0}

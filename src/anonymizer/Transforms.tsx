@@ -56,21 +56,25 @@ const Transforms: Record<string, ITransform> = {
       return text;
     },
   },
-  [TRANSFORM_TYPES.PSEUDONYMIZE]: {
+  [TRANSFORM_TYPES.DEIDENTIFY]: {
     _hash: function (text) {
       return CryptoJS.SHA256(text).toString();
     },
     preview: function (text, args) {
       return (
         <span style={{ fontStyle: "italic", color: "blue" }}>
-          {`${this._hash(text + args.salt || "").substring(
+          To be hashed with TTP's salt
+          {/* {`${this._hash(text + args.salt || "").substring(
             0,
             args.output_len
-          )}...`}
+          )}...`} */}
         </span>
       );
     },
     process: function (text, args) {
+      if (Object.is(args.output_len, undefined)) {
+        return this._hash(text + args.salt || "");
+      }
       return this._hash(text + args.salt || "").substring(0, args.output_len);
     },
   },

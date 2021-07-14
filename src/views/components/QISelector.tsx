@@ -12,7 +12,7 @@ const QISelector = ({
   return (
     <Select
       mode="multiple"
-      placeholder="Select Quasi Identifiers (Optional)"
+      placeholder="Select Quasi-Identifiers"
       value={selectedQuasiIdentifiers}
       onChange={(selectedItems) => {
         setSelectedQuasiIdentifiers(selectedItems);

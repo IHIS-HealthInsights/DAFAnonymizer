@@ -26,12 +26,15 @@ ctx.onmessage = (event) => {
     header: hasHeader,
     chunk: ({ data, errors, meta }) => {
       if (!data.length || errors.length) {
-        console.error(errors);
-        return;
+        ctx.postMessage({
+          type: "ERROR",
+          errors: errors,
+        });
+        throw new Error("Error parsing CSV file");
       }
       if (!hasHeader) {
         // Convert 2d array into objects with generated header
-        const numCols = data[0].length;
+        const numCols = (data[0] as [any]).length;
         data = data.map((row) => {
           const d = {};
           for (let i = 0; i < numCols; i++) {
@@ -43,7 +46,7 @@ ctx.onmessage = (event) => {
 
       // Resolve transformations to be applied once, assume that every record has the same keys
       if (isFirstChunk) {
-        for (const col in data[0]) {
+        for (const col in data[0] as [any]) {
           transforms[col] = resolveTransform(
             selectedMode,
             selectedTransforms[col]
@@ -51,9 +54,10 @@ ctx.onmessage = (event) => {
         }
       }
 
-      data = anonymize(data, transforms, dropIndexes, saltMap, argsMap);
+      let anonData: Record<string, any>[];
+      anonData = anonymize(data, transforms, dropIndexes, saltMap, argsMap);
 
-      let lines = Papa.unparse(data, {
+      let lines = Papa.unparse(anonData, {
         skipEmptyLines: true,
         header: isFirstChunk,
       });

@@ -1,41 +1,38 @@
 import React, { useState } from "react";
-import { Input, Button } from "antd";
+import { Input } from "antd";
 const { TextArea } = Input;
 
 const SaltMapInput = ({ setSaltMap, saltMap }) => {
   const [saltString, setSaltString] = useState(
     JSON.stringify(saltMap, null, 2)
   );
+  const [error, setError] = useState(null);
   const [isInvalid, setIsInvalid] = useState(false);
 
   return (
     <div style={{ textAlign: "left" }}>
       <p>
-        <strong>Apply Custom Salt for hashing</strong>
+        <strong>Apply Secret Salt</strong>
         <br />
         <span>
-          A random salt has been generated for each field you want to
-          pseudonymize. You may override the defaults by editing the salt values
-          in the JSON dictionary below.
+          A secret salt must be provided for each field you want to de-identify,
+          by editing the values in the JSON configuration below.
         </span>
         <br />
-        <strong>Important Note:</strong>
+        <strong style={{ color: "red" }}>Important Note:</strong>
         <span>
-          &nbsp;Keep a copy of the salts used for pseudonymization, in order to
-          replicate the process with a different dataset
+          &nbsp;Keep a copy of the salts used for hashing, in order to replicate
+          the process with a different dataset for subsequent merging.
         </span>
       </p>
+      {error ? <span style={{ color: "red" }}>{error}</span> : null}
       <TextArea
         style={{ fontFamily: "monospace", color: isInvalid ? "red" : null }}
         rows={4}
         value={saltString}
-        onChange={(e) => setSaltString(e.target.value)}
-      />
-      <Button
-        style={{ marginTop: 10 }}
-        size="small"
-        type="primary"
-        onClick={() => {
+        onChange={(e) => {
+          const saltString = e.target.value;
+          setError(null);
           try {
             const saltMap = JSON.parse(saltString);
             setSaltMap(saltMap);
@@ -44,14 +41,12 @@ const SaltMapInput = ({ setSaltMap, saltMap }) => {
           } catch (e) {
             if (e instanceof SyntaxError) {
               setIsInvalid(true);
-              alert(e.message);
+              setError(e.message);
+              setSaltString(saltString);
             }
           }
         }}
-        disabled={saltString.length === 0}
-      >
-        Update
-      </Button>
+      />
     </div>
   );
 };

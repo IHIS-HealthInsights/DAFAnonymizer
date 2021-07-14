@@ -1,5 +1,5 @@
 import React from "react";
-import { TRANSFORM_TYPES, FIELD_TYPES } from "../../anonymizer/Types";
+import { FIELD_TYPES } from "../../anonymizer/Types";
 import { Select } from "antd";
 const { Option, OptGroup } = Select;
 
@@ -23,7 +23,7 @@ const TransformTypeSelector = (props) => {
         }
       }}
     >
-      <OptGroup label="DAFAA Field Types">
+      <OptGroup label="Transformation Types">
         {Object.keys(FIELD_TYPES).map((type) => {
           return (
             <Option key={type} value={type}>
@@ -32,7 +32,7 @@ const TransformTypeSelector = (props) => {
           );
         })}
       </OptGroup>
-      <OptGroup label="Transform Types">
+      {/* <OptGroup label="Transform Types">
         {Object.keys(TRANSFORM_TYPES).map((type) => {
           return (
             <Option key={type} value={type}>
@@ -40,7 +40,7 @@ const TransformTypeSelector = (props) => {
             </Option>
           );
         })}
-      </OptGroup>
+      </OptGroup> */}
     </Select>
   );
 };
